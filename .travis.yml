@@ -1,20 +1,15 @@
+sudo: false
 language: python
-env:
-    - TOX_ENV=py26
-    - TOX_ENV=py27
-    - TOX_ENV=py33
-    - TOX_ENV=py34
-    - TOX_ENV=py35
-    - TOX_ENV=pypy
-
-install:
-    - pip install tox --use-mirrors
-
-script:
-    - tox -e $TOX_ENV
-
+python:
+  - "3.6"
+  - "pypy3"
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+install: pip install tox-travis
+script: tox
 after_success:
-    - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then pip install coveralls --use-mirrors ; coveralls ; fi
-
+    - if [[ $TRAVIS_PYTHON_VERSION != 'pypy3' ]]; then pip install coveralls ; coveralls ; fi
 notifications:
   email: false
