@@ -8,6 +8,8 @@ def test_isvar():
 
 def test_var():
     assert var(1) == var(1)
+    one_lv = var(1)
+    assert var(1) is one_lv
     assert var() != var()
 
 
