@@ -1,15 +1,20 @@
 import weakref
 
+from abc import ABCMeta
 from contextlib import contextmanager, suppress
-
-from .dispatch import dispatch
 
 
 _global_logic_variables = set()
 _glv = _global_logic_variables
 
 
-class Var(object):
+class LVarType(ABCMeta):
+    def __instancecheck__(self, o):
+        with suppress(TypeError):
+            return issubclass(type(o), LVarType) or o in _glv
+
+
+class Var(metaclass=LVarType):
     """A logic variable type.
 
     Fresh logic variables will unify with anything:
@@ -73,15 +78,8 @@ def vars(n, **kwargs):
     return [var(**kwargs) for i in range(n)]
 
 
-@dispatch(Var)
-def isvar(v):
-    return True
-
-
-@dispatch(object)
 def isvar(o):
-    with suppress(TypeError):
-        return o in _glv
+    return isinstance(o, Var)
 
 
 @contextmanager
