@@ -9,9 +9,9 @@ version = re.findall(
 )[0]
 
 setup(
-    name="unification",
+    name="logical-unification",
     version=version,
-    description="Unification",
+    description="Logical unification in Python",
     url="http://github.com/brandonwillard/unification/",
     maintainer="Brandon T. Willard",
     maintainer_email="brandonwillard@gmail.com",
