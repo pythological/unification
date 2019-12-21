@@ -54,7 +54,8 @@ def test_complex():
     assert d(2, 1) == 3
     assert d(10, 10) == 100
     assert d(10, (10, 10)) == (10, (10, 10))
-    assert raises(NotImplementedError, lambda: d(1, 2))
+    with raises(NotImplementedError):
+        d(1, 2)
 
 
 def test_dict():
@@ -70,7 +71,6 @@ def test_ordering():
     x = var("x")
     y = var("y")
     o = ordering([(1,), (x,), (2,), (y,), (x, x), (1, x), (x, 1), (1, 2)])
-    print("Ordering:", o)
 
     for a, b in zip(o, o[1:]):
         assert supercedes(a, b) or not supercedes(b, a)
@@ -79,7 +79,8 @@ def test_ordering():
 def test_raises_error():
     d = Dispatcher("d")
 
-    assert raises(NotImplementedError, lambda: d(1, 2, 3))
+    with raises(NotImplementedError):
+        d(1, 2, 3)
 
 
 def test_register():

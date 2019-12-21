@@ -1,5 +1,7 @@
-from unification.core import reify, unify
+from types import MappingProxyType
+
 from unification import var
+from unification.core import reify, unify
 
 
 def test_reify():
@@ -10,6 +12,7 @@ def test_reify():
     assert reify((1, y), s) == (1, 2)
     assert reify((1, (x, (y, 2))), s) == (1, (1, (2, 2)))
     assert reify(z, s) == (1, 2)
+    assert reify(z, MappingProxyType(s)) == (1, 2)
 
 
 def test_reify_dict():
@@ -39,6 +42,12 @@ def test_unify():
     assert unify(1, 2, {}) == False
     assert unify(var(1), 2, {}) == {var(1): 2}
     assert unify(2, var(1), {}) == {var(1): 2}
+    assert unify(2, var(1), MappingProxyType({})) == {var(1): 2}
+
+
+def test_iter():
+    assert unify([1], (1,)) is False
+    assert unify((i for i in [1, 2]), [1, 2]) is False
 
 
 def test_unify_seq():
