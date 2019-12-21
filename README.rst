@@ -2,6 +2,7 @@ Unification
 ===========
 
 |Build Status|
+|Coverage|
 
 Straightforward Unification, extensible via dispatch.
 
@@ -118,17 +119,10 @@ moderately complex cases but break down under very complex ones.
 History
 -------
 
-This was carved out from the LogPy_ and `Multiple Dispatch`_ projects.
+This project is a fork of `unification`_.
 
-
-Author
-------
-
-`Matthew Rocklin`_
-
-
-.. _LogPy: http://github.com/logpy/logpy/
-.. _`Multiple Dispatch`: http://github.com/mrocklin/multipledispatch/
-.. _`Matthew Rocklin`: http://matthewrocklin.com/
-.. |Build Status| image:: https://travis-ci.org/mrocklin/unification.png
-   :target: https://travis-ci.org/mrocklin/unification
+.. _`unification`: https://github.com/mrocklin/unification/
+.. |Build Status| image:: https://travis-ci.org/brandonwillard/unification.png
+   :target: https://travis-ci.org/brandonwillard/unification
+.. |Coverage| image:: https://coveralls.io/repos/github/brandonwillard/unification/badge.svg?branch=master
+   :target: https://coveralls.io/github/brandonwillard/unification

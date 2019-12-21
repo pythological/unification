@@ -1,5 +1,5 @@
 from .core import unify, reify
-from .variable import var, isvar
+from .variable import isvar
 from .utils import _toposort, freeze
 from toolz import groupby, first
 
@@ -27,17 +27,23 @@ class Dispatcher(object):
             if s is not False:
                 result = self.funcs[signature]
                 return result, s
-        raise NotImplementedError("No match found. \nKnown matches: "
-                + str(self.ordering) + "\nInput: " + str(args))
+        raise NotImplementedError(
+            "No match found. \nKnown matches: "
+            + str(self.ordering)
+            + "\nInput: "
+            + str(args)
+        )
 
     def register(self, *signature):
         def _(func):
             self.add(signature, func)
             return self
+
         return _
 
+
 class VarDispatcher(Dispatcher):
-    """ A dispatcher that calls functions with variable names
+    """A dispatcher that calls functions with variable names.
 
     >>> d = VarDispatcher('d')
     >>> x = var('x')
@@ -55,21 +61,22 @@ class VarDispatcher(Dispatcher):
 
     >>> d('double', 10)
     20
+
     """
+
     def __call__(self, *args, **kwargs):
         func, s = self.resolve(args)
         d = dict((k.token, v) for k, v in s.items())
         return func(**d)
 
 
-
-
 global_namespace = dict()
 
 
 def match(*signature, **kwargs):
-    namespace = kwargs.get('namespace', global_namespace)
-    dispatcher = kwargs.get('Dispatcher', Dispatcher)
+    namespace = kwargs.get("namespace", global_namespace)
+    dispatcher = kwargs.get("Dispatcher", Dispatcher)
+
     def _(func):
         name = func.__name__
 
@@ -80,11 +87,12 @@ def match(*signature, **kwargs):
         d.add(signature, func)
 
         return d
+
     return _
 
 
 def supercedes(a, b):
-    """ ``a`` is a more specific match than ``b`` """
+    """Check if ``a`` is a more specific match than ``b``."""
     if isvar(b) and not isvar(a):
         return True
     s = unify(a, b)
@@ -97,9 +105,8 @@ def supercedes(a, b):
         return False
 
 
-# Taken from multipledispatch
 def edge(a, b, tie_breaker=hash):
-    """ A should be checked before B
+    """Check A before B.
 
     Tie broken by tie_breaker, defaults to ``hash``
     """
@@ -111,11 +118,10 @@ def edge(a, b, tie_breaker=hash):
     return False
 
 
-# Taken from multipledispatch
 def ordering(signatures):
-    """ A sane ordering of signatures to check, first to last
+    """Check a sane ordering of signatures, first to last.
 
-    Topoological sort of edges as given by ``edge`` and ``supercedes``
+    Topological sort of edges as given by ``edge`` and ``supercedes``
     """
     signatures = list(map(tuple, signatures))
     edges = [(a, b) for a in signatures for b in signatures if edge(a, b)]

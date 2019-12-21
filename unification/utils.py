@@ -1,17 +1,8 @@
-from functools import partial
-from toolz.compatibility import range, map
-
-
-def hashable(x):
-    try:
-        hash(x)
-        return True
-    except TypeError:
-        return False
+from contextlib import suppress
 
 
 def transitive_get(key, d):
-    """ Transitive dict.get
+    """Get a value for a dict key in a transitive fashion.
 
     >>> d = {1: 2, 2: 3, 3: 4}
     >>> d.get(1)
@@ -19,23 +10,16 @@ def transitive_get(key, d):
     >>> transitive_get(1, d)
     4
     """
-    while hashable(key) and key in d:
-        key = d[key]
+    with suppress(TypeError):
+        while key in d:
+            key = d[key]
     return key
 
 
-def raises(err, lamda):
-    try:
-        lamda()
-        return False
-    except err:
-        return True
-
-
-# Taken from theano/theano/gof/sched.py
-# Avoids licensing issues because this was written by Matthew Rocklin
 def _toposort(edges):
-    """ Topological sort algorithm by Kahn [1] - O(nodes + vertices)
+    """Topologically sort a dictionary.
+
+    Algorithm by Kahn [1] - O(nodes + vertices).
 
     inputs:
         edges - a dict of the form {a: {b, c}} where b and c depend on a
@@ -70,7 +54,7 @@ def _toposort(edges):
 
 
 def reverse_dict(d):
-    """Reverses direction of dependence dict
+    """Reverses the direction of a dependency dict.
 
     >>> d = {'a': (1, 2), 'b': (2, 3), 'c':()}
     >>> reverse_dict(d)  # doctest: +SKIP
@@ -85,7 +69,7 @@ def reverse_dict(d):
     result = {}
     for key in d:
         for val in d[key]:
-            result[val] = result.get(val, tuple()) + (key, )
+            result[val] = result.get(val, tuple()) + (key,)
     return result
 
 
@@ -93,12 +77,12 @@ def xfail(func):
     try:
         func()
         raise Exception("XFailed test passed")  # pragma:nocover
-    except:
+    except Exception:
         pass
 
 
 def freeze(d):
-    """ Freeze container to hashable form
+    """Freeze container to hashable a form.
 
     >>> freeze(1)
     1

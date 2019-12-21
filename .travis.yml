@@ -1,15 +1,27 @@
-sudo: false
+dist: xenial
 language: python
-python:
-  - "3.6"
-  - "pypy3"
+
 matrix:
   include:
-    - python: 3.7
-      dist: xenial
-install: pip install tox-travis
-script: tox
+  - name: "Python 3.6 Lint"
+    python: 3.6
+    env: PYTHON_VERSION=3.6 NAME="LINT"
+  - name: "Python 3.6 Unit Test"
+    python: 3.6
+    env: PYTHON_VERSION=3.6 NAME="UNIT"
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
+  - if [[ $NAME == UNIT ]]; then pip install coveralls; fi
+  - pip freeze
+
+script:
+  - if [[ $NAME == UNIT ]]; then pytest -v tests/ --cov=unification/; fi
+  - if [[ $NAME == LINT ]]; then make lint; fi
+
 after_success:
-    - if [[ $TRAVIS_PYTHON_VERSION != 'pypy3' ]]; then pip install coveralls ; coveralls ; fi
-notifications:
-  email: false
+  - echo $(pwd)
+  - ls -la
+  - if [[ $NAME == UNIT ]]; then sed -i 's/\/opt\/unification/\/home\/travis\/build\/brandonwillard\/unification/g' .coverage; fi
+  - if [[ $NAME == UNIT ]]; then coveralls; fi
