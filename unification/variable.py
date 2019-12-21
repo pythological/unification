@@ -10,30 +10,51 @@ _glv = _global_logic_variables
 
 
 class Var(object):
-    """A logic variable type."""
+    """A logic variable type.
+
+    Fresh logic variables will unify with anything:
+
+        >>> unify(var(), 1)
+        {~_1: 1}
+        >>> unify(var(), [2])
+        {~_2: [2]}
+        >>> unify(var(), var())
+        {~_3: ~_4}
+
+    """
 
     __slots__ = ("token", "__weakref__")
     _refs = weakref.WeakValueDictionary()
     _id = 1
 
-    def __new__(cls, *token):
-        if len(token) == 0:
-            token = "_%s" % Var._id
-            Var._id += 1
-        elif len(token) == 1:
-            token = token[0]
+    def __new__(cls, token=None, prefix=""):
+        """Construct a new logic variable.
 
-        obj = Var._refs.get(token, None)
+        Parameters
+        ----------
+        token: Hashable (optional)
+            A unique identifier for the logic variable.
+        prefix: str (optional)
+            A prefix to use when token isn't specified and the internal count
+            value is used.  Useful as a means of identifying
+            "non-globally"-scoped logic variables from their `str`/`repr`
+            output.
+        """
+        if token is None:
+            token = f"{prefix}_{Var._id}"
+            cls._id += 1
+
+        obj = cls._refs.get(token, None)
 
         if obj is None:
             obj = object.__new__(cls)
             obj.token = token
-            Var._refs[token] = obj
+            cls._refs[token] = obj
 
         return obj
 
     def __str__(self):
-        return "~" + str(self.token)
+        return f"~{self.token}"
 
     __repr__ = __str__
 
@@ -44,8 +65,12 @@ class Var(object):
         return hash((type(self), self.token))
 
 
-var = lambda *args: Var(*args)
-vars = lambda n: [var() for i in range(n)]
+var = Var
+
+
+def vars(n, **kwargs):
+    """Create n-many fresh logic variables."""
+    return [var(**kwargs) for i in range(n)]
 
 
 @dispatch(Var)
@@ -61,9 +86,8 @@ def isvar(o):
 
 @contextmanager
 def variables(*variables):
-    """Create a context manager for making arbitrary objects logic variables.
+    """Create a context manager within which arbitrary objects can be logic variables.
 
-    >>> from __future__ import with_statement
     >>> with variables(1):
     ...     print(isvar(1))
     True

@@ -11,6 +11,7 @@ def test_var():
     one_lv = var(1)
     assert var(1) is one_lv
     assert var() != var()
+    assert var(prefix="a") != var(prefix="a")
 
 
 def test_var_inputs():
