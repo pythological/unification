@@ -1,5 +1,6 @@
 from unification.variable import isvar, var, vars, variables
 
+
 def test_isvar():
     assert not isvar(3)
     assert isvar(var(3))

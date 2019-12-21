@@ -1,20 +1,27 @@
+dist: xenial
 language: python
-env:
-    - TOX_ENV=py26
-    - TOX_ENV=py27
-    - TOX_ENV=py33
-    - TOX_ENV=py34
-    - TOX_ENV=py35
-    - TOX_ENV=pypy
+
+matrix:
+  include:
+  - name: "Python 3.6 Lint"
+    python: 3.6
+    env: PYTHON_VERSION=3.6 NAME="LINT"
+  - name: "Python 3.6 Unit Test"
+    python: 3.6
+    env: PYTHON_VERSION=3.6 NAME="UNIT"
 
 install:
-    - pip install tox --use-mirrors
+  - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
+  - if [[ $NAME == UNIT ]]; then pip install coveralls; fi
+  - pip freeze
 
 script:
-    - tox -e $TOX_ENV
+  - if [[ $NAME == UNIT ]]; then pytest -v tests/ --cov=unification/; fi
+  - if [[ $NAME == LINT ]]; then make lint; fi
 
 after_success:
-    - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then pip install coveralls --use-mirrors ; coveralls ; fi
-
-notifications:
-  email: false
+  - echo $(pwd)
+  - ls -la
+  - if [[ $NAME == UNIT ]]; then sed -i 's/\/opt\/unification/\/home\/travis\/build\/brandonwillard\/unification/g' .coverage; fi
+  - if [[ $NAME == UNIT ]]; then coveralls; fi

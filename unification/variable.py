@@ -1,5 +1,5 @@
-from contextlib import contextmanager
-from .utils import hashable
+from contextlib import contextmanager, suppress
+
 from .dispatch import dispatch
 
 _global_logic_variables = set()
@@ -7,9 +7,10 @@ _glv = _global_logic_variables
 
 
 class Var(object):
-    """ Logic Variable """
+    """A logic variable type."""
 
     _id = 1
+
     def __new__(cls, *token):
         if len(token) == 0:
             token = "_%s" % Var._id
@@ -23,6 +24,7 @@ class Var(object):
 
     def __str__(self):
         return "~" + str(self.token)
+
     __repr__ = __str__
 
     def __eq__(self, other):
@@ -43,12 +45,13 @@ def isvar(v):
 
 @dispatch(object)
 def isvar(o):
-    return not not _glv and hashable(o) and o in _glv
+    with suppress(TypeError):
+        return o in _glv
 
 
 @contextmanager
 def variables(*variables):
-    """ Context manager for logic variables
+    """Create a context manager for making arbitrary objects logic variables.
 
     >>> from __future__ import with_statement
     >>> with variables(1):
