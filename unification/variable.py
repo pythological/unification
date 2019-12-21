@@ -1,6 +1,9 @@
+import weakref
+
 from contextlib import contextmanager, suppress
 
 from .dispatch import dispatch
+
 
 _global_logic_variables = set()
 _glv = _global_logic_variables
@@ -9,6 +12,8 @@ _glv = _global_logic_variables
 class Var(object):
     """A logic variable type."""
 
+    __slots__ = ("token", "__weakref__")
+    _refs = weakref.WeakValueDictionary()
     _id = 1
 
     def __new__(cls, *token):
@@ -18,8 +23,13 @@ class Var(object):
         elif len(token) == 1:
             token = token[0]
 
-        obj = object.__new__(cls)
-        obj.token = token
+        obj = Var._refs.get(token, None)
+
+        if obj is None:
+            obj = object.__new__(cls)
+            obj.token = token
+            Var._refs[token] = obj
+
         return obj
 
     def __str__(self):
