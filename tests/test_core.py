@@ -39,7 +39,7 @@ def test_reify_complex():
 
 def test_unify():
     assert unify(1, 1, {}) == {}
-    assert unify(1, 2, {}) == False
+    assert unify(1, 2, {}) is False
     assert unify(var(1), 2, {}) == {var(1): 2}
     assert unify(2, var(1), {}) == {var(1): 2}
     assert unify(2, var(1), MappingProxyType({})) == {var(1): 2}
