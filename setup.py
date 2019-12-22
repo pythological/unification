@@ -1,24 +1,38 @@
 #!/usr/bin/env python
+import versioneer
 
-from os.path import exists, join
-import re
+from os.path import exists
 from setuptools import setup
 
-version = re.findall(
-    r"__version__ = \"([.0-9]+)\"", open(join("unification", "__init__.py"), "r").read()
-)[0]
 
 setup(
     name="logical-unification",
-    version=version,
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description="Logical unification in Python",
-    url="http://github.com/brandonwillard/unification/",
+    url="http://github.com/pythological/unification/",
     maintainer="Brandon T. Willard",
-    maintainer_email="brandonwillard@gmail.com",
+    maintainer_email="brandonwillard+unification@gmail.com",
     license="BSD",
     keywords="unification logic-programming dispatch",
     packages=["unification"],
-    install_requires=open("requirements.txt").read().split("\n"),
-    long_description=(open("README.rst").read() if exists("README.rst") else ""),
+    install_requires=["toolz", "multipledispatch",],
+    long_description=(open("README.md").read() if exists("README.md") else ""),
+    long_description_content_type="text/markdown",
     zip_safe=False,
+    python_requires=">=3.6",
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Topic :: Software Development :: Libraries",
+    ],
 )
