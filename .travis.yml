@@ -1,27 +1,21 @@
 dist: xenial
 language: python
 
-matrix:
-  include:
-  - name: "Python 3.6 Lint"
-    python: 3.6
-    env: PYTHON_VERSION=3.6 NAME="LINT"
-  - name: "Python 3.6 Unit Test"
-    python: 3.6
-    env: PYTHON_VERSION=3.6 NAME="UNIT"
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "pypy3"
 
 install:
   - pip install -r requirements.txt
-  - pip install -r requirements-dev.txt
-  - if [[ $NAME == UNIT ]]; then pip install coveralls; fi
-  - pip freeze
 
 script:
-  - if [[ $NAME == UNIT ]]; then pytest -v tests/ --cov=unification/; fi
-  - if [[ $NAME == LINT ]]; then make lint; fi
+  - pylint unification/ tests/
+  - if [[ `command -v black` ]]; then
+      black --check unification tests;
+    fi
+  - pytest -v tests/ --cov=unification/
 
 after_success:
-  - echo $(pwd)
-  - ls -la
-  - if [[ $NAME == UNIT ]]; then sed -i 's/\/opt\/unification/\/home\/travis\/build\/brandonwillard\/unification/g' .coverage; fi
-  - if [[ $NAME == UNIT ]]; then coveralls; fi
+  - coveralls
