@@ -1,5 +1,4 @@
-from .core import unify, reify
-from .dispatch import dispatch
+from collections.abc import Mapping
 
 from .core import unify, reify, _unify, _reify
 
@@ -26,8 +25,8 @@ def unifiable(cls):
     >>> unify(a, b, {})
     {~x: 2}
     """
-    _unify.add((cls, cls, dict), unify_object)
-    _reify.add((cls, dict), reify_object)
+    _unify.add((cls, cls, Mapping), unify_object)
+    _reify.add((cls, Mapping), reify_object)
 
     return cls
 
