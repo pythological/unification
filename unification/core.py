@@ -29,7 +29,7 @@ def _reify(d, s):
 
 @dispatch(object, Mapping)
 def _reify(o, s):
-    return o  # catch all, just return the object
+    return o
 
 
 @dispatch(slice, Mapping)
@@ -52,13 +52,13 @@ def reify(e, s):
     {1: 2, 3: (4, 5)}
     """
     if isvar(e):
-        return reify(s[e], s) if e in s else e
+        e = walk(e, s)
     return _reify(e, s)
 
 
 @dispatch(object, object, Mapping)
 def _unify(u, v, s):
-    return False  # catch all
+    return False
 
 
 def _unify_seq(u, v, s):
