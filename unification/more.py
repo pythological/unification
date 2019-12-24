@@ -1,6 +1,8 @@
 from .core import unify, reify
 from .dispatch import dispatch
 
+from .core import unify, reify, _unify, _reify
+
 
 def unifiable(cls):
     """Register standard unify and reify operations on class.
@@ -74,12 +76,6 @@ def _reify_object_slots(o, s):
         return newobj
 
 
-@dispatch(slice, dict)
-def _reify(o, s):
-    """Reify a Python ``slice`` object."""
-    return slice(*reify((o.start, o.stop, o.step), s))
-
-
 def unify_object(u, v, s):
     """Unify two Python objects.
 
@@ -108,9 +104,3 @@ def unify_object(u, v, s):
         )
     else:
         return unify(u.__dict__, v.__dict__, s)
-
-
-@dispatch(slice, slice, dict)
-def _unify(u, v, s):
-    """Unify a Python ``slice`` object."""
-    return unify((u.start, u.stop, u.step), (v.start, v.stop, v.step), s)

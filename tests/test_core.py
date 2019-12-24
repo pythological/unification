@@ -37,6 +37,19 @@ def test_reify_complex():
     assert reify(e, s) == {1: [2], 3: (4, 5)}
 
 
+def test_unify_slice():
+    x = var("x")
+    y = var("y")
+
+    assert unify(slice(1), slice(1), {}) == {}
+    assert unify(slice(1, 2, 3), x, {}) == {x: slice(1, 2, 3)}
+    assert unify(slice(1, 2, None), slice(x, y), {}) == {x: 1, y: 2}
+
+
+def test_reify_slice():
+    assert reify(slice(1, var(2), 3), {var(2): 10}) == slice(1, 10, 3)
+
+
 def test_unify():
     assert unify(1, 1, {}) == {}
     assert unify(1, 2, {}) is False

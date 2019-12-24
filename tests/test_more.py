@@ -61,20 +61,6 @@ def test_objects_full():
     ) == Foo(1, Bar(Foo(2, 3)))
 
 
-def test_unify_slice():
-    x = var("x")
-    y = var("y")
-
-    assert unify(slice(1), slice(1), {}) == {}
-    assert unify(slice(1, 2, 3), x, {}) == {x: slice(1, 2, 3)}
-    assert unify(slice(1, 2, None), slice(x, y), {}) == {x: 1, y: 2}
-
-
-def test_reify_slice():
-    x = var("x")
-    assert reify(slice(1, var(2), 3), {var(2): 10}) == slice(1, 10, 3)
-
-
 @unifiable
 class A(object):
     def __init__(self, a, b):
@@ -105,7 +91,7 @@ class Aslot(object):
         return self.__dict__ == other.__dict__
 
 
-def test_unifiable():
+def test_unifiable_slots():
     x = var("x")
     f = Aslot(1, 2)
     g = Aslot(1, x)

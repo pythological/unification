@@ -32,6 +32,12 @@ def _reify(o, s):
     return o  # catch all, just return the object
 
 
+@dispatch(slice, Mapping)
+def _reify(o, s):
+    return slice(*reify((o.start, o.stop, o.step), s))
+
+
+@dispatch(object, Mapping)
 def reify(e, s):
     """Replace variables of an expression with their substitutions.
 
@@ -92,6 +98,11 @@ def _unify(u, v, s):
         if s is False:
             return False
     return s
+
+
+@dispatch(slice, slice, dict)
+def _unify(u, v, s):
+    return unify((u.start, u.stop, u.step), (v.start, v.stop, v.step), s)
 
 
 @dispatch(object, object, Mapping)
