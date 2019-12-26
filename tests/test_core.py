@@ -1,4 +1,5 @@
 from types import MappingProxyType
+from collections import OrderedDict
 
 from unification import var
 from unification.core import reify, unify, unground_lvars
@@ -15,11 +16,19 @@ def test_reify():
     assert reify(z, MappingProxyType(s)) == (1, 2)
 
 
-def test_reify_dict():
+def test_reify_Mapping():
     x, y = var(), var()
     s = {x: 2, y: 4}
-    e = {1: x, 3: {5: y}}
-    assert reify(e, s) == {1: 2, 3: {5: 4}}
+    e = [(1, x), (3, {5: y})]
+    expected_res = [(1, 2), (3, {5: 4})]
+    assert reify(dict(e), s) == dict(expected_res)
+    assert reify(OrderedDict(e), s) == OrderedDict(expected_res)
+
+
+def test_reify_Set():
+    x, y = var(), var()
+    assert reify({1, 2, x, y}, {x: 3}) == {1, 2, 3, y}
+    assert reify(frozenset({1, 2, x, y}), {x: 3}) == frozenset({1, 2, 3, y})
 
 
 def test_reify_list():
@@ -72,10 +81,11 @@ def test_unify_seq():
 
 
 def test_unify_set():
-    x = var("x")
-    assert unify(set((1, 2)), set((1, 2)), {}) == {}
-    assert unify(set((1, x)), set((1, 2)), {}) == {x: 2}
-    assert unify(set((x, 2)), set((1, 2)), {}) == {x: 1}
+    x, y = var(), var()
+    assert unify({1, 2}, {1, 2}, {}) == {}
+    assert unify({1, x}, {1, 2}, {}) == {x: 2}
+    assert unify({x, 2}, {1, 2}, {}) == {x: 1}
+    assert unify({1, y, x}, {2, 1}, {x: 2}) is False
 
 
 def test_unify_dict():

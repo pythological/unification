@@ -1,30 +1,12 @@
 from toolz import assoc
 from operator import length_hint
-from collections.abc import Iterator, Mapping
+from functools import partial
+from collections import OrderedDict
+from collections.abc import Iterator, Mapping, Set
 
 from .utils import transitive_get as walk
 from .variable import isvar
 from .dispatch import dispatch
-
-
-@dispatch(Iterator, Mapping)
-def _reify(t, s):
-    return iter(reify(arg, s) for arg in t)
-
-
-@dispatch(tuple, Mapping)
-def _reify(t, s):
-    return tuple(reify(iter(t), s))
-
-
-@dispatch(list, Mapping)
-def _reify(t, s):
-    return list(reify(iter(t), s))
-
-
-@dispatch(dict, Mapping)
-def _reify(d, s):
-    return dict((k, reify(v, s)) for k, v in d.items())
 
 
 @dispatch(object, Mapping)
@@ -32,8 +14,30 @@ def _reify(o, s):
     return o
 
 
-@dispatch(slice, Mapping)
-def _reify(o, s):
+def _reify_Iterable(type_ctor, t, s):
+    return type_ctor(reify(a, s) for a in t)
+
+
+for seq, ctor in (
+    (tuple, tuple),
+    (list, list),
+    (Iterator, iter),
+    (set, set),
+    (frozenset, frozenset),
+):
+    _reify.add((seq, Mapping), partial(_reify_Iterable, ctor))
+
+
+def _reify_Mapping(ctor, d, s):
+    return ctor((k, reify(v, s)) for k, v in d.items())
+
+
+for seq in (dict, OrderedDict):
+    _reify.add((seq, Mapping), partial(_reify_Mapping, seq))
+
+
+@_reify.register(slice, Mapping)
+def _reify_slice(o, s):
     return slice(*reify((o.start, o.stop, o.step), s))
 
 
@@ -61,7 +65,7 @@ def _unify(u, v, s):
     return False
 
 
-def _unify_seq(u, v, s):
+def _unify_Sequence(u, v, s):
     len_u = length_hint(u, -1)
     len_v = length_hint(v, -1)
 
@@ -76,19 +80,19 @@ def _unify_seq(u, v, s):
 
 
 for seq in (tuple, list, Iterator):
-    _unify.add((seq, seq, Mapping), _unify_seq)
+    _unify.add((seq, seq, Mapping), _unify_Sequence)
 
 
-@dispatch((set, frozenset), (set, frozenset), Mapping)
-def _unify(u, v, s):
+@_unify.register(Set, Set, Mapping)
+def _unify_Set(u, v, s):
     i = u & v
     u = u - i
     v = v - i
-    return _unify(sorted(u), sorted(v), s)
+    return _unify(iter(u), iter(v), s)
 
 
-@dispatch(dict, dict, Mapping)
-def _unify(u, v, s):
+@_unify.register(Mapping, Mapping, Mapping)
+def _unify_Mapping(u, v, s):
     if len(u) != len(v):
         return False
     for key, uval in u.items():
@@ -100,8 +104,8 @@ def _unify(u, v, s):
     return s
 
 
-@dispatch(slice, slice, dict)
-def _unify(u, v, s):
+@_unify.register(slice, slice, dict)
+def _unify_slice(u, v, s):
     return unify((u.start, u.stop, u.step), (v.start, v.stop, v.step), s)
 
 
@@ -124,8 +128,8 @@ def unify(u, v, s):
     return _unify(u, v, s)
 
 
-@dispatch(object, object)
-def unify(u, v):
+@unify.register(object, object)
+def unify_NoMap(u, v):
     return unify(u, v, {})
 
 
