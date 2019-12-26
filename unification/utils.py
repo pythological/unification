@@ -73,14 +73,6 @@ def reverse_dict(d):
     return result
 
 
-def xfail(func):
-    try:
-        func()
-        raise Exception("XFailed test passed")  # pragma:nocover
-    except Exception:
-        pass
-
-
 def freeze(d):
     """Freeze container to hashable a form.
 
