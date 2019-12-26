@@ -1,5 +1,6 @@
-from .core import unify, reify
-from .dispatch import dispatch
+from collections.abc import Mapping
+
+from .core import unify, reify, _unify, _reify
 
 
 def unifiable(cls):
@@ -24,8 +25,8 @@ def unifiable(cls):
     >>> unify(a, b, {})
     {~x: 2}
     """
-    _unify.add((cls, cls, dict), unify_object)
-    _reify.add((cls, dict), reify_object)
+    _unify.add((cls, cls, Mapping), unify_object)
+    _reify.add((cls, Mapping), reify_object)
 
     return cls
 
@@ -74,12 +75,6 @@ def _reify_object_slots(o, s):
         return newobj
 
 
-@dispatch(slice, dict)
-def _reify(o, s):
-    """Reify a Python ``slice`` object."""
-    return slice(*reify((o.start, o.stop, o.step), s))
-
-
 def unify_object(u, v, s):
     """Unify two Python objects.
 
@@ -108,9 +103,3 @@ def unify_object(u, v, s):
         )
     else:
         return unify(u.__dict__, v.__dict__, s)
-
-
-@dispatch(slice, slice, dict)
-def _unify(u, v, s):
-    """Unify a Python ``slice`` object."""
-    return unify((u.start, u.stop, u.step), (v.start, v.stop, v.step), s)
