@@ -9,6 +9,10 @@ from .variable import isvar
 from .dispatch import dispatch
 
 
+class UngroundLVarException(Exception):
+    """An exception signaling that an unground variables was found."""
+
+
 @dispatch(object, Mapping)
 def _reify(o, s):
     return o
@@ -153,3 +157,24 @@ def unground_lvars(u, s):
         _reify.add((object, Mapping), _reify_object)
 
     return lvars
+
+
+def isground(u, s):
+    """Determine whether or not `u` contains an unground logic variable under mappings `s`."""
+
+    _reify_object = _reify.dispatch(object, Mapping)
+
+    def _reify_var(u, s):
+        if isvar(u):
+            raise UngroundLVarException()
+        return u
+
+    _reify.add((object, Mapping), _reify_var)
+    try:
+        reify(u, s)
+    except UngroundLVarException:
+        return False
+    finally:
+        _reify.add((object, Mapping), _reify_object)
+
+    return True

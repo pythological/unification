@@ -2,7 +2,7 @@ from types import MappingProxyType
 from collections import OrderedDict
 
 from unification import var
-from unification.core import reify, unify, unground_lvars
+from unification.core import reify, unify, unground_lvars, isground
 
 
 def test_reify():
@@ -114,4 +114,14 @@ def test_unground_lvars():
     assert (
         unground_lvars((1, [var("a"), [var("b"), 2], 3]), {var("a"): 4, var("b"): 5})
         == set()
+    )
+
+    assert isground((1, 2), {})
+    assert isground((1, var("a")), {var("a"): 2})
+    assert isground([var("a"), [var("b"), 2], 3], {var("a"): var("b"), var("b"): 1})
+    assert not isground((1, var("a")), {var("a"): var("b")})
+    assert not isground((1, var()), {})
+    assert not isground((1, [var("a"), [var("b"), 2], 3]), {})
+    assert not isground(
+        [var("a"), [var("b"), 2], 3], {var("a"): var("b"), var("b"): var("c")}
     )
