@@ -1,9 +1,14 @@
-from unification.variable import isvar, var, vars, variables
+from unification.variable import isvar, var, vars, variables, Var
 
 
 def test_isvar():
     assert not isvar(3)
     assert isvar(var(3))
+
+    class CustomVar(Var):
+        pass
+
+    assert isvar(CustomVar())
 
 
 def test_var():

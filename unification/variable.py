@@ -11,7 +11,7 @@ _glv = _global_logic_variables
 class LVarType(ABCMeta):
     def __instancecheck__(self, o):
         with suppress(TypeError):
-            return issubclass(type(o), LVarType) or o in _glv
+            return issubclass(type(o), (Var, LVarType)) or o in _glv
 
 
 class Var(metaclass=LVarType):
