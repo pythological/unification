@@ -64,7 +64,9 @@ class Var(metaclass=LVarType):
     __repr__ = __str__
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.token == other.token
+        if type(self) == type(other):
+            return self.token == other.token
+        return NotImplemented
 
     def __hash__(self):
         return hash((type(self), self.token))
