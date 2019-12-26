@@ -127,3 +127,25 @@ def unify(u, v, s):
 @dispatch(object, object)
 def unify(u, v):
     return unify(u, v, {})
+
+
+def unground_lvars(u, s):
+    """Return the unground logic variables from a term and state."""
+
+    lvars = set()
+    _reify_object = _reify.dispatch(object, Mapping)
+
+    def _reify_var(u, s):
+        nonlocal lvars
+
+        if isvar(u):
+            lvars.add(u)
+        return u
+
+    _reify.add((object, Mapping), _reify_var)
+    try:
+        reify(u, s)
+    finally:
+        _reify.add((object, Mapping), _reify_object)
+
+    return lvars

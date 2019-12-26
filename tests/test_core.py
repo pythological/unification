@@ -1,7 +1,7 @@
 from types import MappingProxyType
 
 from unification import var
-from unification.core import reify, unify
+from unification.core import reify, unify, unground_lvars
 
 
 def test_reify():
@@ -93,3 +93,15 @@ def test_unify_complex():
 
     assert unify({1: (2, 3)}, {1: (2, var(5))}, {}) == {var(5): 3}
     assert unify({1: [2, 3]}, {1: [2, var(5)]}, {}) == {var(5): 3}
+
+
+def test_unground_lvars():
+    assert unground_lvars((1, 2), {}) == set()
+    assert unground_lvars((1, [var("a"), [var("b"), 2], 3]), {}) == {var("a"), var("b")}
+    assert unground_lvars((1, [var("a"), [var("b"), 2], 3]), {var("a"): 4}) == {
+        var("b")
+    }
+    assert (
+        unground_lvars((1, [var("a"), [var("b"), 2], 3]), {var("a"): 4, var("b"): 5})
+        == set()
+    )
