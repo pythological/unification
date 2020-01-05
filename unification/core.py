@@ -19,7 +19,7 @@ def _reify(o, s):
 
 
 def _reify_Iterable(type_ctor, t, s):
-    return type_ctor(reify(a, s) for a in t)
+    return type_ctor(tuple(reify(a, s) for a in t))
 
 
 for seq, ctor in (
@@ -59,6 +59,7 @@ def reify(e, s):
     >>> reify(e, s)
     {1: 2, 3: (4, 5)}
     """
+
     if isvar(e):
         e = walk(e, s)
     return _reify(e, s)
