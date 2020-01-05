@@ -46,16 +46,16 @@ docstyle:
 
 format:
 	@printf "Checking code style with black...\n"
-	black --check unification/
+	black --check unification/ tests/
 	@printf "\033[1;34mBlack passes!\033[0m\n\n"
 
 style:
 	@printf "Checking code style with pylint...\n"
-	pylint unification/
+	pylint unification/ tests/
 	@printf "\033[1;34mPylint passes!\033[0m\n\n"
 
 black:  # Format code in-place using black.
-	black unification/
+	black unification/ tests/
 
 test:  # Test code using pytest.
 	pytest -v tests/ --cov=unification/ --cov-report=xml --html=testing-report.html --self-contained-html

@@ -106,22 +106,36 @@ def test_unify_complex():
 
 
 def test_unground_lvars():
-    assert unground_lvars((1, 2), {}) == set()
-    assert unground_lvars((1, [var("a"), [var("b"), 2], 3]), {}) == {var("a"), var("b")}
-    assert unground_lvars((1, [var("a"), [var("b"), 2], 3]), {var("a"): 4}) == {
-        var("b")
-    }
-    assert (
-        unground_lvars((1, [var("a"), [var("b"), 2], 3]), {var("a"): 4, var("b"): 5})
-        == set()
-    )
+    a_lv, b_lv = var(), var()
 
-    assert isground((1, 2), {})
-    assert isground((1, var("a")), {var("a"): 2})
-    assert isground([var("a"), [var("b"), 2], 3], {var("a"): var("b"), var("b"): 1})
-    assert not isground((1, var("a")), {var("a"): var("b")})
-    assert not isground((1, var()), {})
-    assert not isground((1, [var("a"), [var("b"), 2], 3]), {})
-    assert not isground(
-        [var("a"), [var("b"), 2], 3], {var("a"): var("b"), var("b"): var("c")}
-    )
+    for ctor in (tuple, list, iter, set, frozenset):
+
+        if ctor not in (set, frozenset):
+            sub_ctor = list
+        else:
+            sub_ctor = tuple
+
+        assert unground_lvars(ctor((1, 2)), {}) == set()
+        assert unground_lvars(
+            ctor((1, sub_ctor((a_lv, sub_ctor((b_lv, 2)), 3)))), {}
+        ) == {a_lv, b_lv}
+        assert unground_lvars(
+            ctor((1, sub_ctor((a_lv, sub_ctor((b_lv, 2)), 3)))), {a_lv: 4}
+        ) == {b_lv}
+        assert (
+            unground_lvars(
+                ctor((1, sub_ctor((a_lv, sub_ctor((b_lv, 2)), 3)))), {a_lv: 4, b_lv: 5}
+            )
+            == set()
+        )
+
+        assert isground(ctor((1, 2)), {})
+        assert isground(ctor((1, a_lv)), {a_lv: 2})
+        assert isground(ctor((a_lv, sub_ctor((b_lv, 2)), 3)), {a_lv: b_lv, b_lv: 1})
+
+        assert not isground(ctor((1, a_lv)), {a_lv: b_lv})
+        assert not isground(ctor((1, var())), {})
+        assert not isground(ctor((1, sub_ctor((a_lv, sub_ctor((b_lv, 2)), 3)))), {})
+        assert not isground(
+            ctor((a_lv, sub_ctor((b_lv, 2)), 3)), {a_lv: b_lv, b_lv: var("c")}
+        )
