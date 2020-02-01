@@ -2,7 +2,26 @@
 
 [![Build Status](https://travis-ci.org/pythological/unification.svg?branch=master)](https://travis-ci.org/pythological/unification) [![Coverage Status](https://coveralls.io/repos/github/pythological/unification/badge.svg?branch=master)](https://coveralls.io/github/pythological/unification?branch=master) [![PyPI](https://img.shields.io/pypi/v/logical-unification)](https://pypi.org/project/logical-unification/)
 
-Logical [`unification`](https://en.wikipedia.org/wiki/Unification_(computer_science)) in Python, extensible via dispatch.
+[Logical unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) in Python, extensible via dispatch.
+
+## Installation
+
+Using `pip`:
+```bash
+pip install logical-unification
+```
+
+To install from source:
+```bash
+git clone git@github.com:pythological/unification.git
+cd unification
+pip install -r requirements.txt
+```
+
+Tests can be run with the provided `Makefile`:
+```bash
+make check
+```
 
 ## Examples
 
@@ -104,25 +123,6 @@ See the full example in the [examples directory](https://github.com/pythological
 Unification stresses extensibility over performance, preliminary benchmarks show that this is 2-5x slower than straight tuple-based unification.
 
 `unification`'s approach is reliable; although one caveat is set unification, which is challenging to do in general.  It should work well in moderately complex cases, but it may break down under very complex ones.
-
-## Installation
-
-Using `pip`:
-```bash
-pip install python-unification
-```
-
-To install from source:
-```bash
-git clone git@github.com:pythological/unification.git
-cd unification
-pip install -r requirements.txt
-```
-
-Tests can be run with the provided `Makefile`:
-```bash
-make check
-```
 
 ## About
 
