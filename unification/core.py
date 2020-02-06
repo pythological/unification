@@ -1,7 +1,8 @@
 from toolz import assoc
 from operator import length_hint
 from functools import partial
-from collections import OrderedDict
+
+from collections import OrderedDict, UserDict
 from collections.abc import Iterator, Mapping, Set
 
 from .utils import transitive_get as walk
@@ -11,6 +12,76 @@ from .dispatch import dispatch
 
 class UngroundLVarException(Exception):
     """An exception signaling that an unground variables was found."""
+
+
+class ContractingAssociationMap(UserDict):
+    """A map that contracts association chains.
+
+    For instance, if we add the logic variable association a -> b to a
+    `ContractingAssociationMap` containing a logic variable associationn like
+    {c -> a, ...}, the result will be {c -> b, a -> b, ...}.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.inverse = {}
+        super().__init__(*args, **kwargs)
+        # TODO
+        # self.data = WeakKeyDictionary(self.data)
+
+    def __setitem__(self, key, value):
+
+        assert isvar(key)
+
+        # Self-associations are a waste
+        if key == value:
+            return
+
+        # Get the (one-step) walked value
+        walk_value = self.data.get(value, value)
+
+        # Get the keys that have this key as a value
+        key_keys = self.inverse.setdefault(key, [])
+
+        if walk_value == key:
+            # The walked value equals the key, so we need to drop the `value`
+            # association before we loop and reintroduce it
+            del self[value]
+            walk_value = value
+
+        for key_key in tuple(key_keys):
+
+            # old_val = self.data[key_key]
+
+            # Remove the old mapping and its inverse
+            del self[key_key]
+
+            # Don't add self associations
+            if (key_key == value) or (key_key == walk_value):
+                continue
+
+            # Remap those association keys to this lvar
+            # TODO: Flatten-out this tail recursion?
+            self[key_key] = walk_value
+
+        if isvar(walk_value):
+            # Add the new association's inverse
+            self.inverse.setdefault(walk_value, []).append(key)
+
+        super().__setitem__(key, walk_value)
+
+    def __delitem__(self, key):
+
+        val = self.data[key]
+
+        if isvar(val):
+
+            # Remove the inverse association
+            self.inverse.setdefault(val, []).remove(key)
+
+            if val in self.inverse and not self.inverse[val]:
+                del self.inverse[val]
+
+        super().__delitem__(key)
 
 
 @dispatch(object, Mapping)

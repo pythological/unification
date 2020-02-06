@@ -2,7 +2,13 @@ from types import MappingProxyType
 from collections import OrderedDict
 
 from unification import var
-from unification.core import reify, unify, unground_lvars, isground
+from unification.core import (
+    reify,
+    unify,
+    unground_lvars,
+    isground,
+    ContractingAssociationMap,
+)
 
 
 def test_reify():
@@ -139,3 +145,82 @@ def test_unground_lvars():
         assert not isground(
             ctor((a_lv, sub_ctor((b_lv, 2)), 3)), {a_lv: b_lv, b_lv: var("c")}
         )
+
+
+def test_ContractingAssociationMap():
+
+    a, b, c, d = var("a"), var("b"), var("c"), var("d")
+
+    # Contractions should happen in the constructor
+    m = ContractingAssociationMap({b: c, c: a, d: d})
+    assert m == {b: a, c: a}
+
+    # Order of entry shouldn't matter
+    m = ContractingAssociationMap([(b, c), (c, a), (d, d)])
+    assert m == {b: a, c: a}
+
+    m = ContractingAssociationMap([(c, a), (b, c), (d, d)])
+    assert m == {b: a, c: a}
+
+    # Nor should the means of entry
+    m = ContractingAssociationMap()
+    m[a] = b
+    m[b] = c
+
+    assert m == {b: c, a: c}
+
+    m = ContractingAssociationMap()
+    m[b] = c
+    m[a] = b
+
+    assert m == {b: c, a: c}
+
+    # Make sure we don't introduce cycles, and that we remove newly imposed
+    # ones
+    m[c] = a
+    assert m == {b: a, c: a}
+
+    m = ContractingAssociationMap([(b, c), (c, b), (d, d)])
+    assert m == {c: b}
+
+    m = ContractingAssociationMap([(c, b), (b, c), (d, d)])
+    assert m == {b: c}
+
+    # Simulate a long chain
+    import timeit
+
+    dict_time = timeit.timeit(
+        stmt="""
+    from unification import var, reify
+    from unification.utils import transitive_get as walk
+
+    m = {}
+    first_lvar = var()
+    lvar = first_lvar
+    for i in range(1000):
+        m[lvar] = var()
+        lvar = m[lvar]
+    m[lvar] = 1
+
+    assert walk(first_lvar, m) == 1
+    """,
+        number=10,
+    )
+
+    cmap_time = timeit.timeit(
+        stmt="""
+    from unification import var, reify
+    from unification.core import ContractingAssociationMap
+
+    m = ContractingAssociationMap()
+    first_lvar = var()
+    lvar = first_lvar
+    for i in range(1000):
+        m[lvar] = var()
+        lvar = m[lvar]
+    m[lvar] = 1
+
+    assert m[first_lvar] == 1
+    """,
+        number=10,
+    )
