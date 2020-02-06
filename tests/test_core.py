@@ -1,3 +1,5 @@
+import pytest
+
 from types import MappingProxyType
 from collections import OrderedDict
 
@@ -139,3 +141,18 @@ def test_unground_lvars():
         assert not isground(
             ctor((a_lv, sub_ctor((b_lv, 2)), 3)), {a_lv: b_lv, b_lv: var("c")}
         )
+
+
+@pytest.mark.xfail(strict=True)
+def test_recursion_limit():
+    import sys
+
+    m = {}
+    first_lvar = var()
+    lvar = first_lvar
+    for i in range(sys.getrecursionlimit()):
+        m[lvar] = (var(),)
+        lvar = m[lvar][0]
+    m[lvar] = 1
+
+    reify(first_lvar, m)
