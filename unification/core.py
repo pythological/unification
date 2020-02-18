@@ -1,25 +1,62 @@
 from toolz import assoc
 from operator import length_hint
 from functools import partial
-from collections import OrderedDict
-from collections.abc import Iterator, Mapping, Set
+from collections import OrderedDict, deque
+from collections.abc import Generator, Iterator, Mapping, Set
 
 from .utils import transitive_get as walk
-from .variable import isvar
+from .variable import isvar, Var
 from .dispatch import dispatch
 
 
+# An object used to tell the reifier that the next yield constructs the reified
+# object from its constituent refications (if any).
+construction_sentinel = object()
+
+
 class UngroundLVarException(Exception):
-    """An exception signaling that an unground variables was found."""
+    """An exception signaling that an unground variable was found."""
 
 
 @dispatch(object, Mapping)
 def _reify(o, s):
-    return o
+    yield o
 
 
-def _reify_Iterable(type_ctor, t, s):
-    return type_ctor(tuple(reify(a, s) for a in t))
+@_reify.register(Var, Mapping)
+def _reify_Var(o, s):
+    o_w = walk(o, s)
+
+    if o_w is o:
+        yield o_w
+    else:
+        yield _reify(o_w, s)
+
+
+def _reify_Iterable_ctor(ctor, t, s):
+    """Create a generator that yields _reify generators.
+
+    The yielded generators need to be evaluated by the caller and the fully
+    reified results "sent" back to this generator so that it can finish
+    constructing reified iterable.
+
+    This approach allows us "collapse" nested `_reify` calls by pushing nested
+    calls up the stack.
+    """
+    res = []
+
+    if isinstance(t, Mapping):
+        t = t.items()
+
+    for y in t:
+        r = _reify(y, s)
+        if isinstance(r, Generator):
+            r = yield r
+        res.append(r)
+
+    yield construction_sentinel
+
+    yield ctor(res)
 
 
 for seq, ctor in (
@@ -29,25 +66,64 @@ for seq, ctor in (
     (set, set),
     (frozenset, frozenset),
 ):
-    _reify.add((seq, Mapping), partial(_reify_Iterable, ctor))
-
-
-def _reify_Mapping(ctor, d, s):
-    return ctor((k, reify(v, s)) for k, v in d.items())
+    _reify.add((seq, Mapping), partial(_reify_Iterable_ctor, ctor))
 
 
 for seq in (dict, OrderedDict):
-    _reify.add((seq, Mapping), partial(_reify_Mapping, seq))
+    _reify.add((seq, Mapping), partial(_reify_Iterable_ctor, seq))
 
 
 @_reify.register(slice, Mapping)
 def _reify_slice(o, s):
-    return slice(*reify((o.start, o.stop, o.step), s))
+    start = yield _reify(o.start, s)
+    stop = yield _reify(o.stop, s)
+    step = yield _reify(o.step, s)
+
+    yield construction_sentinel
+
+    yield slice(start, stop, step)
+
+
+def _reify_eval(e, s, reify_filter=None):
+    """Evaluate a stream of reification results.
+
+    This implementation consists of a deque that simulates an evaluation stack
+    of `_reify`-produced generators.  We're able to overcome `RecursionError`s
+    this way.
+    """
+
+    b = _reify(e, s)
+
+    if not isinstance(b, Generator):
+        return b
+
+    d = deque()
+    r_args = None
+    d.append(b)
+
+    while d:
+        z = d[-1]
+        try:
+            r = z.send(r_args)
+
+            if reify_filter:
+                _ = reify_filter(z, r)
+
+            if isinstance(r, Generator):
+                d.append(r)
+                r_args = None
+            else:
+                r_args = r
+
+        except StopIteration:
+            _ = d.pop()
+
+    return r
 
 
 @dispatch(object, Mapping)
-def reify(e, s):
-    """Replace variables of an expression with their substitutions.
+def reify(e, s, reify_filter=None):
+    """Replace logic variables in a term, `e`, with their substitutions in `s`.
 
     >>> x, y = var(), var()
     >>> e = (1, x, (3, y))
@@ -59,10 +135,7 @@ def reify(e, s):
     >>> reify(e, s)
     {1: 2, 3: (4, 5)}
     """
-
-    if isvar(e):
-        e = walk(e, s)
-    return _reify(e, s)
+    return _reify_eval(e, s)
 
 
 @dispatch(object, object, Mapping)
@@ -142,20 +215,20 @@ def unground_lvars(u, s):
     """Return the unground logic variables from a term and state."""
 
     lvars = set()
-    _reify_object = _reify.dispatch(object, Mapping)
 
-    def _reify_var(u, s):
+    def lvar_filter(z, r):
         nonlocal lvars
 
-        if isvar(u):
-            lvars.add(u)
-        return u
+        if isvar(r):
+            lvars.add(r)
 
-    _reify.add((object, Mapping), _reify_var)
-    try:
-        reify(u, s)
-    finally:
-        _reify.add((object, Mapping), _reify_object)
+        if r is construction_sentinel:
+            z.close()
+
+            # Remove this generator from the stack.
+            raise StopIteration()
+
+    _reify_eval(u, s, lvar_filter)
 
     return lvars
 
@@ -163,19 +236,19 @@ def unground_lvars(u, s):
 def isground(u, s):
     """Determine whether or not `u` contains an unground logic variable under mappings `s`."""
 
-    _reify_object = _reify.dispatch(object, Mapping)
+    def lvar_filter(z, r):
 
-    def _reify_var(u, s):
-        if isvar(u):
+        if isvar(r):
             raise UngroundLVarException()
-        return u
+        elif r is construction_sentinel:
+            z.close()
 
-    _reify.add((object, Mapping), _reify_var)
+            # Remove this generator from the stack.
+            raise StopIteration()
+
     try:
-        reify(u, s)
+        _reify_eval(u, s, lvar_filter)
     except UngroundLVarException:
         return False
-    finally:
-        _reify.add((object, Mapping), _reify_object)
 
     return True

@@ -4,7 +4,7 @@ from types import MappingProxyType
 from collections import OrderedDict
 
 from unification import var
-from unification.core import reify, unify, unground_lvars, isground
+from unification.core import isground, reify, unground_lvars, unify
 
 
 def test_reify():
@@ -142,17 +142,61 @@ def test_unground_lvars():
             ctor((a_lv, sub_ctor((b_lv, 2)), 3)), {a_lv: b_lv, b_lv: var("c")}
         )
 
+    # Make sure that no composite elements are constructed within the
+    # groundedness checks.
+    class CounterList(list):
+        constructions = 0
 
-@pytest.mark.xfail(strict=True)
+        def __new__(cls, *args, **kwargs):
+            cls.constructions += 1
+            return super().__new__(cls, *args, **kwargs)
+
+    test_l = CounterList([1, 2, CounterList([a_lv, CounterList([4])])])
+
+    assert CounterList.constructions == 3
+
+    assert not isground(test_l, {})
+    assert CounterList.constructions == 3
+
+    assert unground_lvars(test_l, {}) == {a_lv}
+
+
 def test_recursion_limit():
     import sys
+    import platform
 
-    m = {}
-    first_lvar = var()
-    lvar = first_lvar
-    for i in range(sys.getrecursionlimit()):
-        m[lvar] = (var(),)
-        lvar = m[lvar][0]
-    m[lvar] = 1
+    def gen_long_chain(last_elem=None, N=None):
+        b_struct = None
+        if N is None:
+            N = sys.getrecursionlimit()
+        for i in range(N - 1, 0, -1):
+            b_struct = [i, last_elem if i == N - 1 else b_struct]
+        return b_struct
 
-    reify(first_lvar, m)
+    a_lv = var()
+
+    b = gen_long_chain(a_lv, 10)
+    res = reify(b, {a_lv: "a"})
+    assert res == gen_long_chain("a", 10)
+
+    r_limit = sys.getrecursionlimit()
+
+    try:
+        sys.setrecursionlimit(100)
+
+        b = gen_long_chain(a_lv, 200)
+        res = reify(b, {a_lv: "a"})
+        exp_res = gen_long_chain("a", 200)
+
+        if platform.python_implementation().lower() != "pypy":
+            # CPython has stack limit issues when comparing nested lists, but
+            # PyPy doesn't.
+            with pytest.raises(RecursionError):
+                assert res == exp_res
+
+        sys.setrecursionlimit(300)
+
+        assert res == exp_res
+
+    finally:
+        sys.setrecursionlimit(r_limit)
