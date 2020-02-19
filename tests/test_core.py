@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from types import MappingProxyType
@@ -46,44 +48,58 @@ def test_reify_complex():
     e = {1: [x], 3: (y, 5)}
 
     assert reify(e, s) == {1: [2], 3: (4, 5)}
+    assert reify((1, {2: x}), {x: slice(0, y), y: 3}) == (1, {2: slice(0, 3)})
+
+
+def test_reify_slice():
+    x = var()
+    assert reify(slice(1, x, 3), {x: 10}) == slice(1, 10, 3)
+
+
+def test_unify():
+    x = var()
+    assert unify(x, x, {}) == {}
+    assert unify(1, 1, {}) == {}
+    assert unify(1, 2, {}) is False
+    assert unify(x, 2, {}) == {x: 2}
+    assert unify(2, x, {}) == {x: 2}
+    assert unify(2, x, MappingProxyType({})) == {x: 2}
 
 
 def test_unify_slice():
-    x = var("x")
-    y = var("y")
-
+    x, y = var(), var()
     assert unify(slice(1), slice(1), {}) == {}
+    assert unify(slice(1, 2, 1), slice(2, 2, 1), {}) is False
+    assert unify(slice(1, 2, 1), slice(x, 2, 1), {x: 2}) is False
+    assert unify(slice(1, 2, 1), slice(1, 3, 1), {}) is False
+    assert unify(slice(1, 4, 2), slice(1, 4, 1), {}) is False
+    assert unify(slice(x), slice(x), {}) == {}
     assert unify(slice(1, 2, 3), x, {}) == {x: slice(1, 2, 3)}
     assert unify(slice(1, 2, None), slice(x, y), {}) == {x: 1, y: 2}
 
 
-def test_reify_slice():
-    assert reify(slice(1, var(2), 3), {var(2): 10}) == slice(1, 10, 3)
-
-
-def test_unify():
-    assert unify(1, 1, {}) == {}
-    assert unify(1, 2, {}) is False
-    assert unify(var(1), 2, {}) == {var(1): 2}
-    assert unify(2, var(1), {}) == {var(1): 2}
-    assert unify(2, var(1), MappingProxyType({})) == {var(1): 2}
-
-
-def test_iter():
+def test_unify_iter():
+    x = var()
     assert unify([1], (1,)) is False
     assert unify((i for i in [1, 2]), [1, 2]) is False
+    assert unify(iter([1, x]), iter([1, 2])) == {x: 2}
 
 
 def test_unify_seq():
+    x = var()
+    assert unify([], [], {}) == {}
+    assert unify([x], [x], {}) == {}
     assert unify((1, 2), (1, 2), {}) == {}
     assert unify([1, 2], [1, 2], {}) == {}
     assert unify((1, 2), (1, 2, 3), {}) is False
-    assert unify((1, var(1)), (1, 2), {}) == {var(1): 2}
-    assert unify((1, var(1)), (1, 2), {var(1): 3}) is False
+    assert unify((1, x), (1, 2), {}) == {x: 2}
+    assert unify((1, x), (1, 2), {x: 3}) is False
 
 
 def test_unify_set():
     x, y = var(), var()
+    assert unify(set(), set(), {}) == {}
+    assert unify({x}, {x}, {}) == {}
     assert unify({1, 2}, {1, 2}, {}) == {}
     assert unify({1, x}, {1, 2}, {}) == {x: 2}
     assert unify({x, 2}, {1, 2}, {}) == {x: 1}
@@ -91,20 +107,23 @@ def test_unify_set():
 
 
 def test_unify_dict():
+    x = var()
     assert unify({1: 2}, {1: 2}, {}) == {}
+    assert unify({1: x}, {1: x}, {}) == {}
     assert unify({1: 2}, {1: 3}, {}) is False
     assert unify({2: 2}, {1: 2}, {}) is False
     assert unify({2: 2, 3: 3}, {1: 2}, {}) is False
-    assert unify({1: var(5)}, {1: 2}, {}) == {var(5): 2}
+    assert unify({1: x}, {1: 2}, {}) == {x: 2}
 
 
 def test_unify_complex():
+    x, y = var(), var()
     assert unify((1, {2: 3}), (1, {2: 3}), {}) == {}
     assert unify((1, {2: 3}), (1, {2: 4}), {}) is False
-    assert unify((1, {2: var(5)}), (1, {2: 4}), {}) == {var(5): 4}
-
-    assert unify({1: (2, 3)}, {1: (2, var(5))}, {}) == {var(5): 3}
-    assert unify({1: [2, 3]}, {1: [2, var(5)]}, {}) == {var(5): 3}
+    assert unify((1, {2: x}), (1, {2: 4}), {}) == {x: 4}
+    assert unify((1, {2: x}), (1, {2: slice(1, y)}), {y: 2}) == {x: slice(1, y), y: 2}
+    assert unify({1: (2, 3)}, {1: (2, x)}, {}) == {x: 3}
+    assert unify({1: [2, 3]}, {1: [2, x]}, {}) == {x: 3}
 
 
 def test_unground_lvars():
@@ -161,17 +180,17 @@ def test_unground_lvars():
     assert unground_lvars(test_l, {}) == {a_lv}
 
 
-def test_recursion_limit():
-    import sys
-    import platform
+def gen_long_chain(last_elem=None, N=None):
+    b_struct = None
+    if N is None:
+        N = sys.getrecursionlimit()
+    for i in range(N - 1, 0, -1):
+        b_struct = [i, last_elem if i == N - 1 else b_struct]
+    return b_struct
 
-    def gen_long_chain(last_elem=None, N=None):
-        b_struct = None
-        if N is None:
-            N = sys.getrecursionlimit()
-        for i in range(N - 1, 0, -1):
-            b_struct = [i, last_elem if i == N - 1 else b_struct]
-        return b_struct
+
+def test_reify_recursion_limit():
+    import platform
 
     a_lv = var()
 
@@ -200,3 +219,14 @@ def test_recursion_limit():
 
     finally:
         sys.setrecursionlimit(r_limit)
+
+
+def test_unify_recursion_limit():
+    a_lv = var()
+
+    b = gen_long_chain("a")
+    b_var = gen_long_chain(a_lv)
+
+    s = unify(b, b_var, {})
+
+    assert s[a_lv] == "a"

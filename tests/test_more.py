@@ -1,6 +1,8 @@
-from unification.more import unify_object, reify_object, unifiable
+from collections.abc import Mapping
+
 from unification import var
-from unification.core import unify, reify, _unify, _reify
+from unification.more import _unify_object, _reify_object, unifiable
+from unification.core import unify, reify, _unify, _reify, stream_eval
 
 
 class Foo(object):
@@ -9,7 +11,7 @@ class Foo(object):
         self.b = b
 
     def __eq__(self, other):
-        return (self.a, self.b) == (other.a, other.b)
+        return type(self) == type(other) and (self.a, self.b) == (other.a, other.b)
 
 
 class Bar(object):
@@ -17,22 +19,24 @@ class Bar(object):
         self.c = c
 
     def __eq__(self, other):
-        return self.c == other.c
+        return type(self) == type(other) and self.c == other.c
 
 
 def test_unify_object():
-    assert unify_object(Foo(1, 2), Foo(1, 2), {}) == {}
-    assert unify_object(Foo(1, 2), Foo(1, 3), {}) is False
-    assert unify_object(Foo(1, 2), Foo(1, var(3)), {}) == {var(3): 2}
+    x = var()
+    assert stream_eval(_unify_object(Foo(1, 2), Foo(1, 2), {})) == {}
+    assert stream_eval(_unify_object(Foo(1, 2), Foo(1, 3), {})) is False
+    assert stream_eval(_unify_object(Foo(1, 2), Foo(1, x), {})) == {x: 2}
 
 
 def test_reify_object():
-    obj = reify_object(Foo(1, var(3)), {var(3): 4})
+    x = var()
+    obj = stream_eval(_reify_object(Foo(1, x), {x: 4}))
     assert obj.a == 1
     assert obj.b == 4
 
     f = Foo(1, 2)
-    assert reify_object(f, {}) is f
+    assert stream_eval(_reify_object(f, {})) is f
 
 
 def test_reify_slots():
@@ -42,23 +46,31 @@ def test_reify_slots():
         def __init__(self, myattr):
             self.myattr = myattr
 
+        def __eq__(self, other):
+            return type(self) == type(other) and self.myattr == other.myattr
+
     x = var()
     s = {x: 1}
     e = SlotsObject(x)
-    assert reify_object(e, s), SlotsObject(1)
-    assert reify_object(SlotsObject(1), s), SlotsObject(1)
+    assert stream_eval(_reify_object(e, s)) == SlotsObject(1)
+    assert stream_eval(_reify_object(SlotsObject(1), s)) == SlotsObject(1)
 
 
 def test_objects_full():
-    _unify.add((Foo, Foo, dict), unify_object)
-    _unify.add((Bar, Bar, dict), unify_object)
-    _reify.add((Foo, dict), reify_object)
-    _reify.add((Bar, dict), reify_object)
+    _unify.add((Foo, Foo, Mapping), _unify_object)
+    _unify.add((Bar, Bar, Mapping), _unify_object)
+    _reify.add((Foo, Mapping), _reify_object)
+    _reify.add((Bar, Mapping), _reify_object)
 
-    assert unify_object(Foo(1, Bar(2)), Foo(1, Bar(var(3))), {}) == {var(3): 2}
-    assert reify(
-        Foo(var("a"), Bar(Foo(var("b"), 3))), {var("a"): 1, var("b"): 2}
-    ) == Foo(1, Bar(Foo(2, 3)))
+    x, y = var(), var()
+    assert unify(Foo(1, 2), Bar(1), {}) is False
+    assert unify(Foo(1, Bar(2)), Foo(1, Bar(x)), {}) == {x: 2}
+    assert reify(Foo(x, Bar(Foo(y, 3))), {x: 1, y: 2}) == Foo(1, Bar(Foo(2, 3)))
+
+    class SubFoo(Foo):
+        pass
+
+    assert unify(Foo(1, 2), SubFoo(1, 2), {}) is False
 
 
 @unifiable
@@ -68,11 +80,11 @@ class A(object):
         self.b = b
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        return type(self) == type(other) and self.__dict__ == other.__dict__
 
 
-def test_unifiable():
-    x = var("x")
+def test_unifiable_dict():
+    x = var()
     f = A(1, 2)
     g = A(1, x)
     assert unify(f, g, {}) == {x: 2}
@@ -81,18 +93,20 @@ def test_unifiable():
 
 @unifiable
 class Aslot(object):
-    slots = "a", "b"
+    __slots__ = ("a", "b")
 
     def __init__(self, a, b):
         self.a = a
         self.b = b
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        return type(self) == type(other) and all(
+            a == b for a, b in zip(self.__slots__, other.__slots__)
+        )
 
 
 def test_unifiable_slots():
-    x = var("x")
+    x = var()
     f = Aslot(1, 2)
     g = Aslot(1, x)
     assert unify(f, g, {}) == {x: 2}

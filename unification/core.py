@@ -14,6 +14,41 @@ from .dispatch import dispatch
 construction_sentinel = object()
 
 
+def stream_eval(z, res_filter=None):
+    """Evaluate a stream of `_reify`/`_unify` results.
+
+    This implementation consists of a deque that simulates an evaluation stack
+    of `_reify`/`_unify`-produced generators.  We're able to overcome
+    `RecursionError`s this way.
+    """
+
+    if not isinstance(z, Generator):
+        return z
+
+    stack = deque()
+    z_args, z_out = None, None
+    stack.append(z)
+
+    while stack:
+        z = stack[-1]
+        try:
+            z_out = z.send(z_args)
+
+            if res_filter:
+                _ = res_filter(z, z_out)
+
+            if isinstance(z_out, Generator):
+                stack.append(z_out)
+                z_args = None
+            else:
+                z_args = z_out
+
+        except StopIteration:
+            _ = stack.pop()
+
+    return z_out
+
+
 class UngroundLVarException(Exception):
     """An exception signaling that an unground variable was found."""
 
@@ -84,45 +119,8 @@ def _reify_slice(o, s):
     yield slice(start, stop, step)
 
 
-def _reify_eval(e, s, reify_filter=None):
-    """Evaluate a stream of reification results.
-
-    This implementation consists of a deque that simulates an evaluation stack
-    of `_reify`-produced generators.  We're able to overcome `RecursionError`s
-    this way.
-    """
-
-    b = _reify(e, s)
-
-    if not isinstance(b, Generator):
-        return b
-
-    d = deque()
-    r_args = None
-    d.append(b)
-
-    while d:
-        z = d[-1]
-        try:
-            r = z.send(r_args)
-
-            if reify_filter:
-                _ = reify_filter(z, r)
-
-            if isinstance(r, Generator):
-                d.append(r)
-                r_args = None
-            else:
-                r_args = r
-
-        except StopIteration:
-            _ = d.pop()
-
-    return r
-
-
 @dispatch(object, Mapping)
-def reify(e, s, reify_filter=None):
+def reify(e, s):
     """Replace logic variables in a term, `e`, with their substitutions in `s`.
 
     >>> x, y = var(), var()
@@ -135,30 +133,56 @@ def reify(e, s, reify_filter=None):
     >>> reify(e, s)
     {1: 2, 3: (4, 5)}
     """
-    return _reify_eval(e, s)
+
+    z = _reify(e, s)
+    return stream_eval(z)
 
 
 @dispatch(object, object, Mapping)
 def _unify(u, v, s):
-    return False
+    return s if u == v else False
 
 
-def _unify_Sequence(u, v, s):
+@_unify.register(Var, (Var, object), Mapping)
+def _unify_Var_object(u, v, s):
+    u_w = walk(u, s)
+
+    if isvar(v):
+        v = walk(v, s)
+
+    if u_w is u:
+        if u != v:
+            yield assoc(s, u, v)
+        else:
+            yield s
+        return
+
+    yield _unify(u_w, v, s)
+
+
+@_unify.register(object, Var, Mapping)
+def _unify_object_Var(u, v, s):
+    return _unify_Var_object(v, u, s)
+
+
+def _unify_Iterable(u, v, s):
     len_u = length_hint(u, -1)
     len_v = length_hint(v, -1)
 
     if len_u != len_v:
-        return False
+        yield False
+        return
 
     for uu, vv in zip(u, v):
-        s = unify(uu, vv, s)
+        s = yield _unify(uu, vv, s)
         if s is False:
-            return False
-    return s
+            return
+    else:
+        yield s
 
 
 for seq in (tuple, list, Iterator):
-    _unify.add((seq, seq, Mapping), _unify_Sequence)
+    _unify.add((seq, seq, Mapping), _unify_Iterable)
 
 
 @_unify.register(Set, Set, Mapping)
@@ -166,25 +190,37 @@ def _unify_Set(u, v, s):
     i = u & v
     u = u - i
     v = v - i
-    return _unify(iter(u), iter(v), s)
+    yield _unify(iter(u), iter(v), s)
 
 
 @_unify.register(Mapping, Mapping, Mapping)
 def _unify_Mapping(u, v, s):
     if len(u) != len(v):
-        return False
+        yield False
+        return
+
     for key, uval in u.items():
         if key not in v:
-            return False
-        s = unify(uval, v[key], s)
+            yield False
+            return
+
+        s = yield _unify(uval, v[key], s)
+
         if s is False:
-            return False
-    return s
+            return
+    else:
+        yield s
 
 
-@_unify.register(slice, slice, dict)
+@_unify.register(slice, slice, Mapping)
 def _unify_slice(u, v, s):
-    return unify((u.start, u.stop, u.step), (v.start, v.stop, v.step), s)
+    s = yield _unify(u.start, v.start, s)
+    if s is False:
+        return
+    s = yield _unify(u.stop, v.stop, s)
+    if s is False:
+        return
+    s = yield _unify(u.step, v.step, s)
 
 
 @dispatch(object, object, Mapping)
@@ -195,15 +231,11 @@ def unify(u, v, s):
     >>> unify((1, x), (1, 2), {})
     {~x: 2}
     """
-    u = walk(u, s)
-    v = walk(v, s)
-    if u == v:
+    if u is v:
         return s
-    if isvar(u):
-        return assoc(s, u, v)
-    if isvar(v):
-        return assoc(s, v, u)
-    return _unify(u, v, s)
+
+    z = _unify(u, v, s)
+    return stream_eval(z)
 
 
 @unify.register(object, object)
@@ -228,7 +260,8 @@ def unground_lvars(u, s):
             # Remove this generator from the stack.
             raise StopIteration()
 
-    _reify_eval(u, s, lvar_filter)
+    z = _reify(u, s)
+    stream_eval(z, lvar_filter)
 
     return lvars
 
@@ -247,7 +280,8 @@ def isground(u, s):
             raise StopIteration()
 
     try:
-        _reify_eval(u, s, lvar_filter)
+        z = _reify(u, s)
+        stream_eval(z, lvar_filter)
     except UngroundLVarException:
         return False
 
