@@ -134,6 +134,9 @@ def reify(e, s):
     {1: 2, 3: (4, 5)}
     """
 
+    if len(s) == 0:
+        return e
+
     z = _reify(e, s)
     return stream_eval(z)
 
