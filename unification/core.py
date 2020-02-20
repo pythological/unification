@@ -286,3 +286,32 @@ def isground(u, s):
         return False
 
     return True
+
+
+def debug_unify(u, v, s):  # pragma: no cover
+    """Stop in the debugger when unify fails.
+
+    You can inspect the generator-based stack by looking through the
+    generator frames in the `stack` variable in `stream_eval`:
+
+        (Pdb) up
+        > .../unification/unification/core.py(39)stream_eval()
+        -> _ = res_filter(z, z_out)
+        (Pdb) stack[-2].gi_frame.f_locals
+        {'u': <set_iterator at 0x7f5ee32414c8>,
+        'v': <set_iterator at 0x7f5ee3241510>,
+        's': {},
+        'len_u': 2,
+        'len_v': 2,
+        'uu': ('debit', ~amount),
+        'vv': ('name', 'Bob')}
+    """
+
+    def _filter(z, r):
+        if r is False:
+            import pdb
+
+            pdb.set_trace()
+
+    z = _unify(u, v, s)
+    return stream_eval(z, _filter)
