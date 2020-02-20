@@ -1,16 +1,14 @@
 from collections.abc import Mapping
 
-from .core import unify, reify, _unify, _reify
+from .core import _unify, _reify, construction_sentinel
 
 
 def unifiable(cls):
-    """Register standard unify and reify operations on class.
+    """Register standard unify and reify operations on a class.
 
     This uses the type and __dict__ or __slots__ attributes to define the
-    nature of the term
+    nature of the term.
 
-    See Also
-    --------
     >>> class A(object):
     ...     def __init__(self, a, b):
     ...         self.a = a
@@ -25,13 +23,13 @@ def unifiable(cls):
     >>> unify(a, b, {})
     {~x: 2}
     """
-    _unify.add((cls, cls, Mapping), unify_object)
-    _reify.add((cls, Mapping), reify_object)
+    _unify.add((cls, cls, Mapping), _unify_object)
+    _reify.add((cls, Mapping), _reify_object)
 
     return cls
 
 
-def reify_object(o, s):
+def _reify_object(o, s):
     """Reify a Python object with a substitution.
 
     >>> class Foo(object):
@@ -56,26 +54,35 @@ def reify_object(o, s):
 
 def _reify_object_dict(o, s):
     obj = object.__new__(type(o))
-    d = reify(o.__dict__, s)
+
+    d = yield _reify(o.__dict__, s)
+
+    yield construction_sentinel
+
     if d == o.__dict__:
-        return o
-    obj.__dict__.update(d)
-    return obj
+        yield o
+    else:
+        obj.__dict__.update(d)
+        yield obj
 
 
 def _reify_object_slots(o, s):
     attrs = [getattr(o, attr) for attr in o.__slots__]
-    new_attrs = reify(attrs, s)
+    new_attrs = yield _reify(attrs, s)
+
+    yield construction_sentinel
+
     if attrs == new_attrs:
-        return o
+        yield o
     else:
         newobj = object.__new__(type(o))
         for slot, attr in zip(o.__slots__, new_attrs):
             setattr(newobj, slot, attr)
-        return newobj
+
+        yield newobj
 
 
-def unify_object(u, v, s):
+def _unify_object(u, v, s):
     """Unify two Python objects.
 
     Unifies their type and ``__dict__`` attributes
@@ -94,12 +101,14 @@ def unify_object(u, v, s):
     {~x: 2}
     """
     if type(u) != type(v):
-        return False
+        yield False
+        return
+
     if hasattr(u, "__slots__"):
-        return unify(
-            [getattr(u, slot) for slot in u.__slots__],
-            [getattr(v, slot) for slot in v.__slots__],
+        yield _unify(
+            tuple(getattr(u, slot) for slot in u.__slots__),
+            tuple(getattr(v, slot) for slot in v.__slots__),
             s,
         )
     else:
-        return unify(u.__dict__, v.__dict__, s)
+        yield _unify(u.__dict__, v.__dict__, s)

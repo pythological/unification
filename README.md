@@ -120,9 +120,7 @@ See the full example in the [examples directory](https://github.com/pythological
 
 ## Performance and Reliability
 
-Unification stresses extensibility over performance, preliminary benchmarks show that this is 2-5x slower than straight tuple-based unification.
-
-`unification`'s approach is reliable; although one caveat is set unification, which is challenging to do in general.  It should work well in moderately complex cases, but it may break down under very complex ones.
+`unification`'s current design allows for unification and reification of nested structures that break the Python stack recursion limit.  This scalability incurs an overhead cost compared to simple stack-based recursive unification/reificiation.
 
 ## About
 

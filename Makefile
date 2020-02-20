@@ -58,11 +58,14 @@ black:  # Format code in-place using black.
 	black unification/ tests/
 
 test:  # Test code using pytest.
-	pytest -v tests/ --cov=unification/ --cov-report=xml --html=testing-report.html --self-contained-html
+	pytest -v tests/ --benchmark-skip --cov=unification/ --cov-report=xml --html=testing-report.html --self-contained-html
+
+benchmark:
+	pytest -v tests/ --benchmark-only --benchmark-autosave --benchmark-group-by=group,param:size --benchmark-max-time=3
 
 coverage: test
 	diff-cover coverage.xml --compare-branch=master --fail-under=100
 
 lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 
-check: lint test coverage  # Both lint and test code. Runs `make lint` followed by `make test`.
+check: lint test coverage benchmark  # Both lint and test code. Runs `make lint` followed by `make test`.

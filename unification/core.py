@@ -1,25 +1,97 @@
 from toolz import assoc
 from operator import length_hint
 from functools import partial
-from collections import OrderedDict
-from collections.abc import Iterator, Mapping, Set
+from collections import OrderedDict, deque
+from collections.abc import Generator, Iterator, Mapping, Set
 
 from .utils import transitive_get as walk
-from .variable import isvar
+from .variable import isvar, Var
 from .dispatch import dispatch
 
 
+# An object used to tell the reifier that the next yield constructs the reified
+# object from its constituent refications (if any).
+construction_sentinel = object()
+
+
+def stream_eval(z, res_filter=None):
+    """Evaluate a stream of `_reify`/`_unify` results.
+
+    This implementation consists of a deque that simulates an evaluation stack
+    of `_reify`/`_unify`-produced generators.  We're able to overcome
+    `RecursionError`s this way.
+    """
+
+    if not isinstance(z, Generator):
+        return z
+
+    stack = deque()
+    z_args, z_out = None, None
+    stack.append(z)
+
+    while stack:
+        z = stack[-1]
+        try:
+            z_out = z.send(z_args)
+
+            if res_filter:
+                _ = res_filter(z, z_out)
+
+            if isinstance(z_out, Generator):
+                stack.append(z_out)
+                z_args = None
+            else:
+                z_args = z_out
+
+        except StopIteration:
+            _ = stack.pop()
+
+    return z_out
+
+
 class UngroundLVarException(Exception):
-    """An exception signaling that an unground variables was found."""
+    """An exception signaling that an unground variable was found."""
 
 
 @dispatch(object, Mapping)
 def _reify(o, s):
-    return o
+    yield o
 
 
-def _reify_Iterable(type_ctor, t, s):
-    return type_ctor(tuple(reify(a, s) for a in t))
+@_reify.register(Var, Mapping)
+def _reify_Var(o, s):
+    o_w = walk(o, s)
+
+    if o_w is o:
+        yield o_w
+    else:
+        yield _reify(o_w, s)
+
+
+def _reify_Iterable_ctor(ctor, t, s):
+    """Create a generator that yields _reify generators.
+
+    The yielded generators need to be evaluated by the caller and the fully
+    reified results "sent" back to this generator so that it can finish
+    constructing reified iterable.
+
+    This approach allows us "collapse" nested `_reify` calls by pushing nested
+    calls up the stack.
+    """
+    res = []
+
+    if isinstance(t, Mapping):
+        t = t.items()
+
+    for y in t:
+        r = _reify(y, s)
+        if isinstance(r, Generator):
+            r = yield r
+        res.append(r)
+
+    yield construction_sentinel
+
+    yield ctor(res)
 
 
 for seq, ctor in (
@@ -29,25 +101,27 @@ for seq, ctor in (
     (set, set),
     (frozenset, frozenset),
 ):
-    _reify.add((seq, Mapping), partial(_reify_Iterable, ctor))
-
-
-def _reify_Mapping(ctor, d, s):
-    return ctor((k, reify(v, s)) for k, v in d.items())
+    _reify.add((seq, Mapping), partial(_reify_Iterable_ctor, ctor))
 
 
 for seq in (dict, OrderedDict):
-    _reify.add((seq, Mapping), partial(_reify_Mapping, seq))
+    _reify.add((seq, Mapping), partial(_reify_Iterable_ctor, seq))
 
 
 @_reify.register(slice, Mapping)
 def _reify_slice(o, s):
-    return slice(*reify((o.start, o.stop, o.step), s))
+    start = yield _reify(o.start, s)
+    stop = yield _reify(o.stop, s)
+    step = yield _reify(o.step, s)
+
+    yield construction_sentinel
+
+    yield slice(start, stop, step)
 
 
 @dispatch(object, Mapping)
 def reify(e, s):
-    """Replace variables of an expression with their substitutions.
+    """Replace logic variables in a term, `e`, with their substitutions in `s`.
 
     >>> x, y = var(), var()
     >>> e = (1, x, (3, y))
@@ -60,32 +134,58 @@ def reify(e, s):
     {1: 2, 3: (4, 5)}
     """
 
-    if isvar(e):
-        e = walk(e, s)
-    return _reify(e, s)
+    if len(s) == 0:
+        return e
+
+    z = _reify(e, s)
+    return stream_eval(z)
 
 
 @dispatch(object, object, Mapping)
 def _unify(u, v, s):
-    return False
+    return s if u == v else False
 
 
-def _unify_Sequence(u, v, s):
+@_unify.register(Var, (Var, object), Mapping)
+def _unify_Var_object(u, v, s):
+    u_w = walk(u, s)
+
+    if isvar(v):
+        v = walk(v, s)
+
+    if u_w is u:
+        if u != v:
+            yield assoc(s, u, v)
+        else:
+            yield s
+        return
+
+    yield _unify(u_w, v, s)
+
+
+@_unify.register(object, Var, Mapping)
+def _unify_object_Var(u, v, s):
+    return _unify_Var_object(v, u, s)
+
+
+def _unify_Iterable(u, v, s):
     len_u = length_hint(u, -1)
     len_v = length_hint(v, -1)
 
     if len_u != len_v:
-        return False
+        yield False
+        return
 
     for uu, vv in zip(u, v):
-        s = unify(uu, vv, s)
+        s = yield _unify(uu, vv, s)
         if s is False:
-            return False
-    return s
+            return
+    else:
+        yield s
 
 
 for seq in (tuple, list, Iterator):
-    _unify.add((seq, seq, Mapping), _unify_Sequence)
+    _unify.add((seq, seq, Mapping), _unify_Iterable)
 
 
 @_unify.register(Set, Set, Mapping)
@@ -93,25 +193,37 @@ def _unify_Set(u, v, s):
     i = u & v
     u = u - i
     v = v - i
-    return _unify(iter(u), iter(v), s)
+    yield _unify(iter(u), iter(v), s)
 
 
 @_unify.register(Mapping, Mapping, Mapping)
 def _unify_Mapping(u, v, s):
     if len(u) != len(v):
-        return False
+        yield False
+        return
+
     for key, uval in u.items():
         if key not in v:
-            return False
-        s = unify(uval, v[key], s)
+            yield False
+            return
+
+        s = yield _unify(uval, v[key], s)
+
         if s is False:
-            return False
-    return s
+            return
+    else:
+        yield s
 
 
-@_unify.register(slice, slice, dict)
+@_unify.register(slice, slice, Mapping)
 def _unify_slice(u, v, s):
-    return unify((u.start, u.stop, u.step), (v.start, v.stop, v.step), s)
+    s = yield _unify(u.start, v.start, s)
+    if s is False:
+        return
+    s = yield _unify(u.stop, v.stop, s)
+    if s is False:
+        return
+    s = yield _unify(u.step, v.step, s)
 
 
 @dispatch(object, object, Mapping)
@@ -122,15 +234,11 @@ def unify(u, v, s):
     >>> unify((1, x), (1, 2), {})
     {~x: 2}
     """
-    u = walk(u, s)
-    v = walk(v, s)
-    if u == v:
+    if u is v:
         return s
-    if isvar(u):
-        return assoc(s, u, v)
-    if isvar(v):
-        return assoc(s, v, u)
-    return _unify(u, v, s)
+
+    z = _unify(u, v, s)
+    return stream_eval(z)
 
 
 @unify.register(object, object)
@@ -142,20 +250,21 @@ def unground_lvars(u, s):
     """Return the unground logic variables from a term and state."""
 
     lvars = set()
-    _reify_object = _reify.dispatch(object, Mapping)
 
-    def _reify_var(u, s):
+    def lvar_filter(z, r):
         nonlocal lvars
 
-        if isvar(u):
-            lvars.add(u)
-        return u
+        if isvar(r):
+            lvars.add(r)
 
-    _reify.add((object, Mapping), _reify_var)
-    try:
-        reify(u, s)
-    finally:
-        _reify.add((object, Mapping), _reify_object)
+        if r is construction_sentinel:
+            z.close()
+
+            # Remove this generator from the stack.
+            raise StopIteration()
+
+    z = _reify(u, s)
+    stream_eval(z, lvar_filter)
 
     return lvars
 
@@ -163,19 +272,49 @@ def unground_lvars(u, s):
 def isground(u, s):
     """Determine whether or not `u` contains an unground logic variable under mappings `s`."""
 
-    _reify_object = _reify.dispatch(object, Mapping)
+    def lvar_filter(z, r):
 
-    def _reify_var(u, s):
-        if isvar(u):
+        if isvar(r):
             raise UngroundLVarException()
-        return u
+        elif r is construction_sentinel:
+            z.close()
 
-    _reify.add((object, Mapping), _reify_var)
+            # Remove this generator from the stack.
+            raise StopIteration()
+
     try:
-        reify(u, s)
+        z = _reify(u, s)
+        stream_eval(z, lvar_filter)
     except UngroundLVarException:
         return False
-    finally:
-        _reify.add((object, Mapping), _reify_object)
 
     return True
+
+
+def debug_unify(u, v, s):  # pragma: no cover
+    """Stop in the debugger when unify fails.
+
+    You can inspect the generator-based stack by looking through the
+    generator frames in the `stack` variable in `stream_eval`:
+
+        (Pdb) up
+        > .../unification/unification/core.py(39)stream_eval()
+        -> _ = res_filter(z, z_out)
+        (Pdb) stack[-2].gi_frame.f_locals
+        {'u': <set_iterator at 0x7f5ee32414c8>,
+        'v': <set_iterator at 0x7f5ee3241510>,
+        's': {},
+        'len_u': 2,
+        'len_v': 2,
+        'uu': ('debit', ~amount),
+        'vv': ('name', 'Bob')}
+    """
+
+    def _filter(z, r):
+        if r is False:
+            import pdb
+
+            pdb.set_trace()
+
+    z = _unify(u, v, s)
+    return stream_eval(z, _filter)
