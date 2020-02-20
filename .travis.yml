@@ -15,7 +15,8 @@ script:
   - if [[ `command -v black` ]]; then
       black --check unification tests;
     fi
-  - pytest -v tests/ --cov=unification/
+  - pytest -v tests/ --benchmark-skip --cov=unification/
+  - pytest -v tests/ --benchmark-only --benchmark-autosave --benchmark-group-by=group,param:size --benchmark-max-time=3
 
 after_success:
   - coveralls
