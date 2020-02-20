@@ -1,7 +1,8 @@
+from toolz import groupby, first
+
 from .core import unify, reify
 from .variable import isvar
 from .utils import _toposort, freeze
-from toolz import groupby, first
 
 
 class Dispatcher(object):
@@ -20,18 +21,16 @@ class Dispatcher(object):
 
     def resolve(self, args):
         n = len(args)
+        frozen_args = freeze(args)
         for signature in self.ordering:
             if len(signature) != n:
                 continue
-            s = unify(freeze(args), signature)
+            s = unify(frozen_args, signature)
             if s is not False:
                 result = self.funcs[signature]
                 return result, s
         raise NotImplementedError(
-            "No match found. \nKnown matches: "
-            + str(self.ordering)
-            + "\nInput: "
-            + str(args)
+            f"No match found. \nKnown matches: {self.ordering} \nInput: {args}"
         )
 
     def register(self, *signature):

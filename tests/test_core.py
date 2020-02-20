@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from unification import var
 from unification.core import isground, reify, unground_lvars, unify
+from unification.utils import freeze
 
 
 def test_reify():
@@ -230,3 +231,17 @@ def test_unify_recursion_limit():
     s = unify(b, b_var, {})
 
     assert s[a_lv] == "a"
+
+
+def test_unify_freeze():
+
+    # These will sometimes be in different orders after conversion to
+    # `iter`/`list`/`tuple`!
+    # u = frozenset({("name", a), ("debit", b)})
+    # v = frozenset({("name", "Bob"), ("debit", 100)})
+
+    a, b = var("name"), var("amount")
+    u = freeze({"name": a, "debit": b})
+    v = freeze({"name": "Bob", "debit": 100})
+
+    assert unify(u, v, {}) == {a: "Bob", b: 100}

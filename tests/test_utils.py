@@ -12,6 +12,6 @@ def test_transitive_get():
 
 
 def test_freeze():
-    assert freeze({1: [2, 3]}) == frozenset([(1, (2, 3))])
-    assert freeze(set([1])) == frozenset([1])
+    assert freeze({1: [2, 3]}) == ((1, (2, 3)),)
+    assert freeze(set([1])) == (1,)
     assert freeze(([1],)) == ((1,),)

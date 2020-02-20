@@ -1,4 +1,5 @@
 from contextlib import suppress
+from collections.abc import Mapping, Set
 
 
 def transitive_get(key, d):
@@ -83,12 +84,12 @@ def freeze(d):
     (1, 2)
 
     >>> freeze({1: 2}) # doctest: +SKIP
-    frozenset([(1, 2)])
+    ((1, 2),)
     """
-    if isinstance(d, dict):
-        return frozenset(map(freeze, d.items()))
-    if isinstance(d, set):
-        return frozenset(map(freeze, d))
+    if isinstance(d, Mapping):
+        return tuple(map(freeze, sorted(d.items(), key=lambda x: hash(x[0]))))
+    if isinstance(d, Set):
+        return tuple(map(freeze, sorted(d, key=hash)))
     if isinstance(d, (tuple, list)):
         return tuple(map(freeze, d))
     return d
