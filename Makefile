@@ -66,6 +66,12 @@ benchmark:
 coverage: test
 	diff-cover coverage.xml --compare-branch=master --fail-under=100
 
+pypy:
+	${PYTHON} setup.py clean --all; \
+	${PYTHON} setup.py rotate --match=.tar.gz,.whl,.egg,.zip --keep=0; \
+	${PYTHON} setup.py sdist bdist_wheel; \
+  twine upload --skip-existing dist/*;
+
 lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 
 check: lint test coverage benchmark  # Both lint and test code. Runs `make lint` followed by `make test`.
