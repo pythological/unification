@@ -60,13 +60,21 @@ def test_reify_slice():
 
 
 def test_unify():
-    x = var()
+    x, y, z = var(), var(), var()
     assert unify(x, x, {}) == {}
     assert unify(1, 1, {}) == {}
     assert unify(1, 2, {}) is False
     assert unify(x, 2, {}) == {x: 2}
     assert unify(2, x, {}) == {x: 2}
     assert unify(2, x, MappingProxyType({})) == {x: 2}
+    assert unify(x, y, {}) == {x: y}
+    assert unify(y, x, {}) == {y: x}
+    assert unify(y, x, {y: x}) == {y: x}
+    assert unify(x, y, {y: x}) == {y: x}
+    assert unify(y, x, {x: y}) == {x: y}
+    assert unify(x, y, {x: y}) == {x: y}
+    assert unify(y, x, {y: z}) == {y: z, z: x}
+    assert unify(x, y, {y: z}) == {y: z, x: z}
 
 
 def test_unify_slice():
@@ -97,6 +105,9 @@ def test_unify_seq():
     assert unify((1, 2), (1, 2, 3), {}) is False
     assert unify((1, x), (1, 2), {}) == {x: 2}
     assert unify((1, x), (1, 2), {x: 3}) is False
+
+    a, b, z = var(), var(), var()
+    assert unify([a, b], x, {x: [z, 1]}) == {x: [z, 1], a: z, b: 1}
 
 
 def test_unify_set():

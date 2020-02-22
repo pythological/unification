@@ -55,7 +55,7 @@ class UngroundLVarException(Exception):
 
 @dispatch(object, Mapping)
 def _reify(o, s):
-    yield o
+    return o
 
 
 @_reify.register(Var, Mapping)
@@ -137,8 +137,7 @@ def reify(e, s):
     if len(s) == 0:
         return e
 
-    z = _reify(e, s)
-    return stream_eval(z)
+    return stream_eval(_reify(e, s))
 
 
 @dispatch(object, object, Mapping)
@@ -151,21 +150,21 @@ def _unify_Var_object(u, v, s):
     u_w = walk(u, s)
 
     if isvar(v):
-        v = walk(v, s)
+        v_w = walk(v, s)
+    else:
+        v_w = v
 
-    if u_w is u:
-        if u != v:
-            yield assoc(s, u, v)
-        else:
-            yield s
-        return
+    if u_w == v_w:
+        yield s
+    elif isvar(u_w):
+        yield assoc(s, u_w, v_w)
+    elif isvar(v_w):
+        yield assoc(s, v_w, u_w)
+    else:
+        yield _unify(u_w, v_w, s)
 
-    yield _unify(u_w, v, s)
 
-
-@_unify.register(object, Var, Mapping)
-def _unify_object_Var(u, v, s):
-    return _unify_Var_object(v, u, s)
+_unify.add((object, Var, Mapping), _unify_Var_object)
 
 
 def _unify_Iterable(u, v, s):
@@ -237,8 +236,7 @@ def unify(u, v, s):
     if u is v:
         return s
 
-    z = _unify(u, v, s)
-    return stream_eval(z)
+    return stream_eval(_unify(u, v, s))
 
 
 @unify.register(object, object)
