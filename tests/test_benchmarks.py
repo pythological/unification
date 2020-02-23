@@ -1,8 +1,6 @@
 import pytest
 
-from toolz import assoc
-
-from unification import unify, reify, var, isvar
+from unification import unify, reify, var, isvar, assoc
 from unification.utils import transitive_get as walk
 
 from tests.utils import gen_long_chain

@@ -1,4 +1,4 @@
-from .core import unify, reify
+from .core import unify, reify, assoc
 from .more import unifiable
 from .variable import var, isvar, vars, variables, Var
 

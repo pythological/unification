@@ -1,4 +1,4 @@
-from toolz import assoc
+from copy import copy
 from operator import length_hint
 from functools import partial
 from collections import OrderedDict, deque
@@ -12,6 +12,17 @@ from .dispatch import dispatch
 # An object used to tell the reifier that the next yield constructs the reified
 # object from its constituent refications (if any).
 construction_sentinel = object()
+
+
+@dispatch(Mapping, object, object)
+def assoc(s, u, v):
+    """Add an entry to a `Mapping` and return it."""
+    if hasattr(s, "copy"):
+        s = s.copy()
+    else:
+        s = copy(s)  # pragma: no cover
+    s[u] = v
+    return s
 
 
 def stream_eval(z, res_filter=None):
