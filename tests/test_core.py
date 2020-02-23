@@ -6,10 +6,31 @@ from types import MappingProxyType
 from collections import OrderedDict
 
 from unification import var
-from unification.core import isground, reify, unground_lvars, unify
+from unification.core import isground, reify, unground_lvars, unify, assoc
 from unification.utils import freeze
 
 from tests.utils import gen_long_chain
+
+
+def test_assoc():
+    d = {"a": 1, 2: 2}
+    assert assoc(d, "c", 3) is not d
+    assert assoc(d, "c", 3) == {"a": 1, 2: 2, "c": 3}
+    assert assoc(d, 2, 3) == {"a": 1, 2: 3}
+    assert assoc(d, "a", 0) == {"a": 0, 2: 2}
+    assert d == {"a": 1, 2: 2}
+
+    def assoc_OrderedDict(s, u, v):
+        s[u] = v
+        return s
+
+    assoc.add((OrderedDict, object, object), assoc_OrderedDict)
+
+    x = var()
+    d2 = OrderedDict(d)
+    assert assoc(d2, x, 3) is d2
+    assert assoc(d2, x, 3) == {"a": 1, 2: 2, x: 3}
+    assert assoc(d, x, 3) is not d
 
 
 def test_reify():
