@@ -1,4 +1,4 @@
-.PHONY: help venv conda docker docstyle format style black test lint check coverage
+.PHONY: help venv conda docker docstyle format style black test lint check coverage pypi
 .DEFAULT_GOAL = help
 
 PYTHON = python
@@ -66,7 +66,7 @@ benchmark:
 coverage: test
 	diff-cover coverage.xml --compare-branch=master --fail-under=100
 
-pypy:
+pypi:
 	${PYTHON} setup.py clean --all; \
 	${PYTHON} setup.py rotate --match=.tar.gz,.whl,.egg,.zip --keep=0; \
 	${PYTHON} setup.py sdist bdist_wheel; \
