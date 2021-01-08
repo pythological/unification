@@ -53,7 +53,7 @@ def _reify_object(o, s):
 
 
 def _reify_object_dict(o, s):
-    obj = object.__new__(type(o))
+    obj = type(o).__new__(type(o))
 
     d = yield _reify(o.__dict__, s)
 

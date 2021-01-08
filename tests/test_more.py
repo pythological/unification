@@ -1,3 +1,4 @@
+from ast import Num
 from collections.abc import Mapping
 
 from unification import var
@@ -27,6 +28,13 @@ def test_unify_object():
     assert stream_eval(_unify_object(Foo(1, 2), Foo(1, 2), {})) == {}
     assert stream_eval(_unify_object(Foo(1, 2), Foo(1, 3), {})) is False
     assert stream_eval(_unify_object(Foo(1, 2), Foo(1, x), {})) == {x: 2}
+
+
+def test_unify_nonstandard_object():
+    x = var()
+    assert stream_eval(_unify_object(Num(n=1), Num(n=1), {})) == {}
+    assert stream_eval(_unify_object(Num(n=1), Num(n=2), {})) is False
+    assert stream_eval(_unify_object(Num(n=1), Num(n=x), {})) == {x: 1}
 
 
 def test_reify_object():
