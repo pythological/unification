@@ -1,0 +1,87 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  changes:
+    name: "Check for changes"
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.changes.outputs.src }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            python: &python
+            - 'unification/**/*.py'
+            - 'tests/**/*.py'
+            - '*.py'
+            src:
+            - *python
+            - '.github/**/*.yml'
+            - 'setup.cfg'
+            - 'requirements.txt'
+            - '.coveragerc'
+
+  style:
+    name: Check code style
+    needs: changes
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - uses: pre-commit/action@v2.0.0
+
+  test:
+    needs:
+      - changes
+      - style
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        python-version:
+          - 3.6
+          - 3.7
+          - 3.8
+          - pypy3
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Test with pytest
+      run: |
+        pytest -v tests/ --benchmark-skip --cov=unification --cov-report=xml:./coverage.xml
+        pytest -v tests/ --benchmark-only --benchmark-autosave --benchmark-group-by=group,param:size --benchmark-max-time=3
+    - name: Coveralls
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel: true
+        flag-name: run-${{ matrix.python-version }}
+
+  coveralls_finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel-finished: true
