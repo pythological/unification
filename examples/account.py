@@ -1,9 +1,8 @@
-from functools import partial
 from collections import defaultdict
+from functools import partial
 
 from unification import var
-from unification.match import match, VarDispatcher
-
+from unification.match import VarDispatcher, match
 
 match = partial(match, Dispatcher=VarDispatcher)
 

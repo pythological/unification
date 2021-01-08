@@ -1,6 +1,6 @@
-from pytest import raises, mark
+from pytest import mark, raises
 
-from unification.match import VarDispatcher, Dispatcher, ordering, supercedes, match
+from unification.match import Dispatcher, VarDispatcher, match, ordering, supercedes
 from unification.variable import var
 
 

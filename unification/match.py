@@ -1,8 +1,8 @@
-from toolz import groupby, first
+from toolz import first, groupby
 
-from .core import unify, reify
-from .variable import isvar
+from .core import reify, unify
 from .utils import _toposort, freeze
+from .variable import isvar
 
 
 class Dispatcher(object):

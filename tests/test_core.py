@@ -1,15 +1,13 @@
 import sys
+from collections import OrderedDict
+from types import MappingProxyType
 
 import pytest
 
-from types import MappingProxyType
-from collections import OrderedDict
-
-from unification import var
-from unification.core import isground, reify, unground_lvars, unify, assoc
-from unification.utils import freeze
-
 from tests.utils import gen_long_chain
+from unification import var
+from unification.core import assoc, isground, reify, unground_lvars, unify
+from unification.utils import freeze
 
 
 def test_assoc():

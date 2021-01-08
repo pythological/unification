@@ -1,10 +1,8 @@
 import pytest
 
-from unification import unify, reify, var, isvar, assoc
-from unification.utils import transitive_get as walk
-
 from tests.utils import gen_long_chain
-
+from unification import assoc, isvar, reify, unify, var
+from unification.utils import transitive_get as walk
 
 nesting_sizes = [10, 35, 300]
 

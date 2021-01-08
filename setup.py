@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import versioneer
-
 from os.path import exists
+
 from setuptools import setup
 
+import versioneer
 
 setup(
     name="logical-unification",
@@ -16,7 +16,10 @@ setup(
     license="BSD",
     keywords="unification logic-programming dispatch",
     packages=["unification"],
-    install_requires=["toolz", "multipledispatch",],
+    install_requires=[
+        "toolz",
+        "multipledispatch",
+    ],
     long_description=(open("README.md").read() if exists("README.md") else ""),
     long_description_content_type="text/markdown",
     zip_safe=False,

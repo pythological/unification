@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from .core import _unify, _reify, construction_sentinel
+from .core import _reify, _unify, construction_sentinel
 
 
 def unifiable(cls):
