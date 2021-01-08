@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 
 from unification import var
-from unification.more import _unify_object, _reify_object, unifiable
-from unification.core import unify, reify, _unify, _reify, stream_eval
+from unification.core import _reify, _unify, reify, stream_eval, unify
+from unification.more import _reify_object, _unify_object, unifiable
 
 
 class Foo(object):

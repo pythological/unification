@@ -1,8 +1,6 @@
 import weakref
-
 from abc import ABCMeta
 from contextlib import contextmanager, suppress
-
 
 _global_logic_variables = set()
 _glv = _global_logic_variables

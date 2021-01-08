@@ -1,5 +1,6 @@
-from multipledispatch import dispatch
 from functools import partial
+
+from multipledispatch import dispatch
 
 namespace = dict()
 

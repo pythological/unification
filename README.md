@@ -125,3 +125,17 @@ See the full example in the [examples directory](https://github.com/pythological
 ## About
 
 This project is a fork of [`unification`](https://github.com/mrocklin/unification/).
+
+## Development
+
+Install the development dependencies:
+
+```bash
+$ pip install -r requirements.txt
+```
+
+Set up `pre-commit` hooks:
+
+```bash
+$ pre-commit install --install-hooks
+```

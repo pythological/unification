@@ -1,4 +1,4 @@
-from unification.variable import isvar, var, vars, variables, Var
+from unification.variable import Var, isvar, var, variables, vars
 
 
 def test_isvar():

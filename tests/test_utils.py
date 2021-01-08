@@ -1,5 +1,5 @@
-from unification.variable import var
 from unification.utils import freeze, transitive_get
+from unification.variable import var
 
 
 def test_transitive_get():

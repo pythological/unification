@@ -1,13 +1,12 @@
-from copy import copy
-from operator import length_hint
-from functools import partial
 from collections import OrderedDict, deque
 from collections.abc import Generator, Iterator, Mapping, Set
+from copy import copy
+from functools import partial
+from operator import length_hint
 
-from .utils import transitive_get as walk
-from .variable import isvar, Var
 from .dispatch import dispatch
-
+from .utils import transitive_get as walk
+from .variable import Var, isvar
 
 # An object used to tell the reifier that the next yield constructs the reified
 # object from its constituent refications (if any).
@@ -279,7 +278,7 @@ def unground_lvars(u, s):
 
 
 def isground(u, s):
-    """Determine whether or not `u` contains an unground logic variable under mappings `s`."""
+    """Determine whether or not `u` contains an unground logic variable under mappings `s`."""  # noqa: E501
 
     def lvar_filter(z, r):
 

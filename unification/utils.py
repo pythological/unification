@@ -1,5 +1,5 @@
-from contextlib import suppress
 from collections.abc import Mapping, Set
+from contextlib import suppress
 
 
 def transitive_get(key, d):
