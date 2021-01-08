@@ -32,6 +32,7 @@ jobs:
             - 'setup.cfg'
             - 'requirements.txt'
             - '.coveragerc'
+            - '.pre-commit-config.yaml'
 
   style:
     name: Check code style
@@ -50,7 +51,7 @@ jobs:
       - changes
       - style
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.changes == 'true' }}
+    if: ${{ needs.changes.outputs.changes == 'true' && needs.style.result == 'success' }}
     strategy:
       matrix:
         python-version:
@@ -77,8 +78,20 @@ jobs:
         parallel: true
         flag-name: run-${{ matrix.python-version }}
 
-  coveralls_finish:
-    needs: test
+  all-checks:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    name: "All tests"
+    needs: [changes, style, test]
+    steps:
+      - name: Check build matrix status
+        if: ${{ needs.changes.outputs.changes == 'true' && (needs.style.result != 'success' || needs.test.result != 'success') }}
+        run: exit 1
+
+  upload-coverage:
+    name: "Upload coverage"
+    needs: [changes, all-checks]
+    if: ${{ needs.changes.outputs.changes == 'true' && needs.all-checks.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls Finished
