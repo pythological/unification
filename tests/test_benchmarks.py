@@ -1,3 +1,6 @@
+import platform
+import sys
+
 import pytest
 
 from tests.utils import gen_long_chain
@@ -47,8 +50,8 @@ def reify_stack(u, s):
 @pytest.mark.parametrize("size", nesting_sizes)
 def test_unify_chain_stream(size, benchmark):
     a_lv = var()
-    form = gen_long_chain(a_lv, size)
-    term = gen_long_chain("a", size)
+    form, lvars = gen_long_chain(a_lv, size, use_lvars=True)
+    term, _ = gen_long_chain("a", size)
 
     res = benchmark(unify, form, term, {})
     assert res[a_lv] == "a"
@@ -58,8 +61,8 @@ def test_unify_chain_stream(size, benchmark):
 @pytest.mark.parametrize("size", nesting_sizes)
 def test_unify_chain_stack(size, benchmark):
     a_lv = var()
-    form = gen_long_chain(a_lv, size)
-    term = gen_long_chain("a", size)
+    form, lvars = gen_long_chain(a_lv, size, use_lvars=True)
+    term, _ = gen_long_chain("a", size)
 
     res = benchmark(unify_stack, form, term, {})
     assert res[a_lv] == "a"
@@ -69,10 +72,11 @@ def test_unify_chain_stack(size, benchmark):
 @pytest.mark.parametrize("size", nesting_sizes)
 def test_reify_chain_stream(size, benchmark):
     a_lv = var()
-    form = gen_long_chain(a_lv, size)
-    term = gen_long_chain("a", size)
+    form, lvars = gen_long_chain(a_lv, size, use_lvars=True)
+    term, _ = gen_long_chain("a", size)
 
-    res = benchmark(reify, form, {a_lv: "a"})
+    lvars.update({a_lv: "a"})
+    res = benchmark(reify_stack, form, lvars)
     assert res == term
 
 
@@ -80,8 +84,42 @@ def test_reify_chain_stream(size, benchmark):
 @pytest.mark.parametrize("size", nesting_sizes)
 def test_reify_chain_stack(size, benchmark):
     a_lv = var()
-    form = gen_long_chain(a_lv, size)
-    term = gen_long_chain("a", size)
+    form, lvars = gen_long_chain(a_lv, size, use_lvars=True)
+    term, _ = gen_long_chain("a", size)
 
-    res = benchmark(reify_stack, form, {a_lv: "a"})
+    lvars.update({a_lv: "a"})
+    res = benchmark(reify_stack, form, lvars)
     assert res == term
+
+
+@pytest.mark.benchmark(group="unify_chain")
+@pytest.mark.parametrize("size", [1000, 5000])
+def test_unify_chain_stream_large(size, benchmark):
+    a_lv = var()
+    form, lvars = gen_long_chain(a_lv, size, use_lvars=True)
+    term, _ = gen_long_chain("a", size)
+
+    res = benchmark(unify, form, term, {})
+    assert res[a_lv] == "a"
+
+
+@pytest.mark.skipif(
+    platform.python_implementation() == "PyPy",
+    reason="PyPy's sys.getrecursionlimit changes",
+)
+@pytest.mark.benchmark(group="reify_chain")
+@pytest.mark.parametrize("size", [sys.getrecursionlimit(), sys.getrecursionlimit() * 5])
+def test_reify_chain_stream_large(size, benchmark):
+    a_lv = var()
+    form, lvars = gen_long_chain(a_lv, size, use_lvars=True)
+    term, _ = gen_long_chain("a", size)
+
+    lvars.update({a_lv: "a"})
+
+    res = benchmark(reify, form, lvars)
+
+    if size < sys.getrecursionlimit():
+        assert res == term
+    else:
+        with pytest.raises(RecursionError):
+            assert res == term
