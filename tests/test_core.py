@@ -218,18 +218,18 @@ def test_reify_recursion_limit():
 
     a_lv = var()
 
-    b = gen_long_chain(a_lv, 10)
+    b, _ = gen_long_chain(a_lv, 10)
     res = reify(b, {a_lv: "a"})
-    assert res == gen_long_chain("a", 10)
+    assert res == gen_long_chain("a", 10)[0]
 
     r_limit = sys.getrecursionlimit()
 
     try:
         sys.setrecursionlimit(100)
 
-        b = gen_long_chain(a_lv, 200)
+        b, _ = gen_long_chain(a_lv, 200)
         res = reify(b, {a_lv: "a"})
-        exp_res = gen_long_chain("a", 200)
+        exp_res, _ = gen_long_chain("a", 200)
 
         if platform.python_implementation().lower() != "pypy":
             # CPython has stack limit issues when comparing nested lists, but
@@ -248,8 +248,8 @@ def test_reify_recursion_limit():
 def test_unify_recursion_limit():
     a_lv = var()
 
-    b = gen_long_chain("a")
-    b_var = gen_long_chain(a_lv)
+    b, _ = gen_long_chain("a")
+    b_var, _ = gen_long_chain(a_lv)
 
     s = unify(b, b_var, {})
 
