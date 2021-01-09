@@ -1,4 +1,4 @@
-from ast import Num
+import ast
 from collections.abc import Mapping
 
 from unification import var
@@ -31,10 +31,11 @@ def test_unify_object():
 
 
 def test_unify_nonstandard_object():
+    _unify.add((ast.AST, ast.AST, Mapping), _unify_object)
     x = var()
-    assert stream_eval(_unify_object(Num(n=1), Num(n=1), {})) == {}
-    assert stream_eval(_unify_object(Num(n=1), Num(n=2), {})) is False
-    assert stream_eval(_unify_object(Num(n=1), Num(n=x), {})) == {x: 1}
+    assert unify(ast.Num(n=1), ast.Num(n=1), {}) == {}
+    assert unify(ast.Num(n=1), ast.Num(n=2), {}) is False
+    assert unify(ast.Num(n=1), ast.Num(n=x), {}) == {x: 1}
 
 
 def test_reify_object():
@@ -45,6 +46,14 @@ def test_reify_object():
 
     f = Foo(1, 2)
     assert stream_eval(_reify_object(f, {})) is f
+
+
+def test_reify_nonstandard_object():
+    _reify.add((ast.AST, Mapping), _reify_object)
+    x = var()
+    assert reify(ast.Num(n=1), {}).n == 1
+    assert reify(ast.Num(n=x), {}).n == x
+    assert reify(ast.Num(n=x), {x: 2}).n == 2
 
 
 def test_reify_slots():
