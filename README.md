@@ -40,6 +40,19 @@ False
 False
 ```
 
+And most Python data structures:
+
+``` python
+>>> unify({"a": 1, "b": 2}, {"a": x, "b": 2})
+{~x: 1}
+>>> unify({"a": 1, "b": 2}, {"a": x, "b": 2, "c": 3})
+False
+>>> from collections import namedtuples
+>>> ntuple = namedtuple("ntuple", ("a", "b")) 
+>>> unify(ntuple(1, 2), ntuple(x, 2))
+{~x: 1}
+```
+
 Custom classes can be made "unifiable" with the `unifiable` decorator:
 
 ```python
