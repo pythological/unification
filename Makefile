@@ -64,7 +64,7 @@ benchmark:
 	pytest -v tests/ --benchmark-only --benchmark-autosave --benchmark-group-by=group,param:size --benchmark-max-time=3
 
 coverage: test
-	diff-cover coverage.xml --compare-branch=master --fail-under=100
+	diff-cover coverage.xml --compare-branch=main --fail-under=100
 
 pypi:
 	${PYTHON} setup.py clean --all; \
