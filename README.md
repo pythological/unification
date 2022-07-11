@@ -25,7 +25,7 @@ make check
 
 ## Examples
 
-`unification` has built-in support for most Python data types:
+`unification` has built-in support for unifying most Python data types via the function `unify`:
 
 ```python
 >>> from unification import *
@@ -33,11 +33,18 @@ make check
 {}
 >>> unify(1, 2)
 False
->>> x = var('x')
+>>> x = var()
 >>> unify((1, x), (1, 2))
 {~x: 2}
 >>> unify((x, x), (1, 2))
 False
+```
+
+Unifiable objects containing logic variables can also be reified using `reify`:
+
+```python
+>>> reify((1, x), {x: 2})
+(1, 2)
 ```
 
 And most Python data structures:
@@ -48,7 +55,7 @@ And most Python data structures:
 >>> unify({"a": 1, "b": 2}, {"a": x, "b": 2, "c": 3})
 False
 >>> from collections import namedtuples
->>> ntuple = namedtuple("ntuple", ("a", "b")) 
+>>> ntuple = namedtuple("ntuple", ("a", "b"))
 >>> unify(ntuple(1, 2), ntuple(x, 2))
 {~x: 1}
 ```
