@@ -1,6 +1,6 @@
 # Logical Unification
 
-[![Build Status](https://travis-ci.org/pythological/unification.svg?branch=master)](https://travis-ci.org/pythological/unification) [![Coverage Status](https://coveralls.io/repos/github/pythological/unification/badge.svg?branch=master)](https://coveralls.io/github/pythological/unification?branch=master) [![PyPI](https://img.shields.io/pypi/v/logical-unification)](https://pypi.org/project/logical-unification/)
+[![Build Status](https://travis-ci.org/pythological/unification.svg?branch=main)](https://travis-ci.org/pythological/unification) [![Coverage Status](https://coveralls.io/repos/github/pythological/unification/badge.svg?branch=main)](https://coveralls.io/github/pythological/unification?branch=main) [![PyPI](https://img.shields.io/pypi/v/logical-unification)](https://pypi.org/project/logical-unification/)
 
 [Logical unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) in Python, extensible via dispatch.
 
