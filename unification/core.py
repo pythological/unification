@@ -25,11 +25,11 @@ def assoc(s, u, v):
 
 
 def stream_eval(z, res_filter=None):
-    """Evaluate a stream of `_reify`/`_unify` results.
+    r"""Evaluate a stream of `_reify`/`_unify` results.
 
     This implementation consists of a deque that simulates an evaluation stack
     of `_reify`/`_unify`-produced generators.  We're able to overcome
-    `RecursionError`s this way.
+    `RecursionError`\s this way.
     """
 
     if not isinstance(z, Generator):
@@ -79,7 +79,7 @@ def _reify_Var(o, s):
 
 
 def _reify_Iterable_ctor(ctor, t, s):
-    """Create a generator that yields _reify generators.
+    """Create a generator that yields `_reify` generators.
 
     The yielded generators need to be evaluated by the caller and the fully
     reified results "sent" back to this generator so that it can finish
@@ -237,7 +237,7 @@ def _unify_slice(u, v, s):
 
 @dispatch(object, object, Mapping)
 def unify(u, v, s):
-    """Find substitution so that u == v while satisfying s.
+    """Find substitution so that ``u == v`` while satisfying `s`.
 
     >>> x = var('x')
     >>> unify((1, x), (1, 2), {})
