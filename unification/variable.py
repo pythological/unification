@@ -10,6 +10,7 @@ class LVarType(ABCMeta):
     def __instancecheck__(self, o):
         with suppress(TypeError):
             return issubclass(type(o), (Var, LVarType)) or o in _glv
+        return False
 
 
 class Var(metaclass=LVarType):
