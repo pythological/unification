@@ -6,7 +6,7 @@ from .variable import isvar
 class Dispatcher(object):
     def __init__(self, name):
         self.name = name
-        self.funcs = dict()
+        self.funcs = {}
         self.ordering = []
 
     def add(self, signature, func):
@@ -67,7 +67,7 @@ class VarDispatcher(Dispatcher):
         return func(**d)
 
 
-global_namespace = dict()
+global_namespace = {}
 
 
 def match(*signature, **kwargs):
