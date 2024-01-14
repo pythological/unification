@@ -2,6 +2,6 @@ from functools import partial
 
 from multipledispatch import dispatch
 
-namespace = dict()
+namespace = {}
 
 dispatch = partial(dispatch, namespace=namespace)
