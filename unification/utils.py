@@ -1,7 +1,6 @@
 import sys
 from collections import deque
 from collections.abc import Mapping, Sequence, Set
-from contextlib import suppress
 
 __PY37 = sys.version_info >= (3, 7)
 
