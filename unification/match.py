@@ -114,8 +114,5 @@ def ordering(signatures):
     Topological sort of edges as given by ``edge`` and ``supercedes``
     """
     return _toposort(
-        {
-            s: [t for t in signatures if edge(s, t)]
-            for s in map(tuple, signatures)
-        }
+        {s: [t for t in signatures if edge(s, t)] for s in map(tuple, signatures)}
     )
