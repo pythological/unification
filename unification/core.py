@@ -1,6 +1,5 @@
 from collections import OrderedDict, deque
 from collections.abc import Generator, Iterator, Mapping, Set
-from copy import copy
 from functools import partial
 from operator import length_hint
 
@@ -16,10 +15,7 @@ construction_sentinel = object()
 @dispatch(Mapping, object, object)
 def assoc(s, u, v):
     """Add an entry to a `Mapping` and return it."""
-    if hasattr(s, "copy"):
-        s = s.copy()
-    else:
-        s = copy(s)  # pragma: no cover
+    s = dict(s)
     s[u] = v
     return s
 
