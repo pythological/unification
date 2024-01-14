@@ -1,6 +1,5 @@
 from collections import OrderedDict, deque
 from collections.abc import Generator, Iterator, Mapping, Set
-from copy import copy
 from functools import partial
 from operator import length_hint
 
@@ -16,10 +15,7 @@ construction_sentinel = object()
 @dispatch(Mapping, object, object)
 def assoc(s, u, v):
     """Add an entry to a `Mapping` and return it."""
-    if hasattr(s, "copy"):
-        s = s.copy()
-    else:
-        s = copy(s)  # pragma: no cover
+    s = dict(s)
     s[u] = v
     return s
 
@@ -35,26 +31,26 @@ def stream_eval(z, res_filter=None):
     if not isinstance(z, Generator):
         return z
 
-    stack = deque()
+    stack = deque([z])
     z_args, z_out = None, None
-    stack.append(z)
 
     while stack:
         z = stack[-1]
         try:
             z_out = z.send(z_args)
 
-            if res_filter:
-                _ = res_filter(z, z_out)
+            if res_filter is not None:
+                res_filter(z, z_out)
 
+        except StopIteration:
+            stack.pop()
+
+        else:
             if isinstance(z_out, Generator):
                 stack.append(z_out)
                 z_args = None
             else:
                 z_args = z_out
-
-        except StopIteration:
-            _ = stack.pop()
 
     return z_out
 

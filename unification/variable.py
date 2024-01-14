@@ -1,15 +1,19 @@
 import weakref
 from abc import ABCMeta
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager
 
-_global_logic_variables = set()
-_glv = _global_logic_variables
+_glv = _global_logic_variables = set()
 
 
 class LVarType(ABCMeta):
     def __instancecheck__(self, o):
-        with suppress(TypeError):
-            return issubclass(type(o), (Var, LVarType)) or o in _glv
+        if issubclass(type(o), Var):
+            return True
+
+        try:
+            return o in _glv
+        except TypeError:
+            return False
 
 
 class Var(metaclass=LVarType):
@@ -44,7 +48,7 @@ class Var(metaclass=LVarType):
             output.
         """
         if token is None:
-            token = f"{prefix}_{Var._id}"
+            token = f"{prefix}_{cls._id}"
             cls._id += 1
 
         obj = cls._refs.get(token, None)
@@ -62,7 +66,7 @@ class Var(metaclass=LVarType):
     __repr__ = __str__
 
     def __eq__(self, other):
-        if type(self) == type(other):
+        if type(self) is type(other):
             return self.token == other.token
         return NotImplemented
 

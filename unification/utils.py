@@ -1,5 +1,8 @@
-from collections.abc import Mapping, Set
-from contextlib import suppress
+import sys
+from collections import deque
+from collections.abc import Mapping, Sequence, Set
+
+__PY37 = sys.version_info >= (3, 7)
 
 
 def transitive_get(key, d):
@@ -11,9 +14,16 @@ def transitive_get(key, d):
     >>> transitive_get(1, d)
     4
     """
-    with suppress(TypeError):
-        while key in d:
+    for _ in range(len(d) + 1):
+        try:
+            if key not in d:
+                break
             key = d[key]
+        except TypeError:
+            break
+    else:
+        raise RecursionError("dict contains a loop")
+
     return key
 
 
@@ -36,21 +46,23 @@ def _toposort(edges):
     Communications of the ACM
     [2] http://en.wikipedia.org/wiki/Toposort#Algorithms
     """
-    incoming_edges = reverse_dict(edges)
-    incoming_edges = dict((k, set(val)) for k, val in incoming_edges.items())
-    S = set((v for v in edges if v not in incoming_edges))
+    incoming_edges = {k: set(val) for k, val in reverse_dict(edges).items()}
+
+    S = deque(v for v in edges if v not in incoming_edges)
     L = []
 
     while S:
-        n = S.pop()
-        L.append(n)
+        n = S.popleft()
         for m in edges.get(n, ()):
-            assert n in incoming_edges[m]
-            incoming_edges[m].remove(n)
-            if not incoming_edges[m]:
-                S.add(m)
-    if any(incoming_edges.get(v, None) for v in edges):
+            edges_m = incoming_edges[m]
+            edges_m.remove(n)
+            if not edges_m:
+                S.append(m)
+        L.append(n)
+
+    if any(incoming_edges.get(v) for v in edges):
         raise ValueError("Input has cycles")
+
     return L
 
 
@@ -70,7 +82,7 @@ def reverse_dict(d):
     result = {}
     for key in d:
         for val in d[key]:
-            result[val] = result.get(val, tuple()) + (key,)
+            result[val] = result.get(val, ()) + (key,)
     return result
 
 
@@ -86,10 +98,16 @@ def freeze(d):
     >>> freeze({1: 2}) # doctest: +SKIP
     ((1, 2),)
     """
+    if isinstance(d, (str, bytes)):
+        return d
     if isinstance(d, Mapping):
-        return tuple(map(freeze, sorted(d.items(), key=lambda x: hash(x[0]))))
+        if __PY37:
+            items = d.items()
+        else:
+            items = sorted(d.items(), key=lambda x: hash(x[0]))
+        return tuple(map(freeze, items))
     if isinstance(d, Set):
         return tuple(map(freeze, sorted(d, key=hash)))
-    if isinstance(d, (tuple, list)):
+    if isinstance(d, Sequence):
         return tuple(map(freeze, d))
     return d

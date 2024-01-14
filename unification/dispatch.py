@@ -1,7 +1,7 @@
-from functools import partial
+from functools import partial as _partial
 
 from multipledispatch import dispatch
 
-namespace = dict()
+namespace = {}
 
-dispatch = partial(dispatch, namespace=namespace)
+_partial = _partial(dispatch, namespace=namespace)

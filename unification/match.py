@@ -1,14 +1,12 @@
-from toolz import first, groupby
-
 from .core import reify, unify
 from .utils import _toposort, freeze
 from .variable import isvar
 
 
-class Dispatcher(object):
+class Dispatcher:
     def __init__(self, name):
         self.name = name
-        self.funcs = dict()
+        self.funcs = {}
         self.ordering = []
 
     def add(self, signature, func):
@@ -65,29 +63,25 @@ class VarDispatcher(Dispatcher):
 
     def __call__(self, *args, **kwargs):
         func, s = self.resolve(args)
-        d = dict((k.token, v) for k, v in s.items())
+        d = {k.token: v for k, v in s.items()}
         return func(**d)
 
 
-global_namespace = dict()
+global_namespace = {}
 
 
 def match(*signature, **kwargs):
     namespace = kwargs.get("namespace", global_namespace)
     dispatcher = kwargs.get("Dispatcher", Dispatcher)
 
-    def _(func):
+    def _match(func):
         name = func.__name__
 
-        if name not in namespace:
-            namespace[name] = dispatcher(name)
-        d = namespace[name]
-
+        d = namespace.setdefault(name, dispatcher(name))
         d.add(signature, func)
-
         return d
 
-    return _
+    return _match
 
 
 def supercedes(a, b):
@@ -97,11 +91,8 @@ def supercedes(a, b):
     s = unify(a, b)
     if s is False:
         return False
-    s = dict((k, v) for k, v in s.items() if not isvar(k) or not isvar(v))
-    if reify(a, s) == a:
-        return True
-    if reify(b, s) == b:
-        return False
+    s = {k: v for k, v in s.items() if not isvar(k) or not isvar(v)}
+    return reify(a, s) == a
 
 
 def edge(a, b, tie_breaker=hash):
@@ -122,11 +113,6 @@ def ordering(signatures):
 
     Topological sort of edges as given by ``edge`` and ``supercedes``
     """
-    signatures = list(map(tuple, signatures))
-    edges = [(a, b) for a in signatures for b in signatures if edge(a, b)]
-    edges = groupby(first, edges)
-    for s in signatures:
-        if s not in edges:
-            edges[s] = []
-    edges = dict((k, [b for a, b in v]) for k, v in edges.items())
-    return _toposort(edges)
+    return _toposort(
+        {s: [t for t in signatures if edge(s, t)] for s in map(tuple, signatures)}
+    )
