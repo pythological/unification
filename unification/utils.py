@@ -23,7 +23,7 @@ def transitive_get(key, d):
                 continue
         break
     else:
-        raise RecursionError('dict contains a loop')
+        raise RecursionError("dict contains a loop")
 
     return key
 
@@ -60,10 +60,10 @@ def _toposort(edges):
             if not edges_m:
                 S.append(m)
         L.append(n)
-    
+
     if any(incoming_edges.get(v) for v in edges):
         raise ValueError("Input has cycles")
-    
+
     return L
 
 
