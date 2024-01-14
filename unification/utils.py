@@ -1,3 +1,4 @@
+from collections import deque
 from collections.abc import Mapping, Set
 from contextlib import suppress
 
@@ -36,21 +37,23 @@ def _toposort(edges):
     Communications of the ACM
     [2] http://en.wikipedia.org/wiki/Toposort#Algorithms
     """
-    incoming_edges = reverse_dict(edges)
-    incoming_edges = dict((k, set(val)) for k, val in incoming_edges.items())
-    S = set((v for v in edges if v not in incoming_edges))
+    incoming_edges = {k: set(val) for k, val in reverse_dict(edges).items()}
+
+    S = deque(v for v in edges if v not in incoming_edges)
     L = []
 
     while S:
-        n = S.pop()
-        L.append(n)
+        n = S.popleft()
         for m in edges.get(n, ()):
-            assert n in incoming_edges[m]
-            incoming_edges[m].remove(n)
-            if not incoming_edges[m]:
-                S.add(m)
-    if any(incoming_edges.get(v, None) for v in edges):
+            edges_m = incoming_edges[m]
+            edges_m.remove(n)
+            if not edges_m:
+                S.append(m)
+        L.append(n)
+    
+    if any(incoming_edges.get(v) for v in edges):
         raise ValueError("Input has cycles")
+    
     return L
 
 
@@ -70,7 +73,7 @@ def reverse_dict(d):
     result = {}
     for key in d:
         for val in d[key]:
-            result[val] = result.get(val, tuple()) + (key,)
+            result[val] = result.get(val, ()) + (key,)
     return result
 
 
