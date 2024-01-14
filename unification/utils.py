@@ -1,6 +1,9 @@
+import sys
 from collections import deque
-from collections.abc import Mapping, Set
+from collections.abc import Mapping, Sequence, Set
 from contextlib import suppress
+
+__PY37 = sys.version_info >= (3, 7)
 
 
 def transitive_get(key, d):
@@ -90,9 +93,13 @@ def freeze(d):
     ((1, 2),)
     """
     if isinstance(d, Mapping):
-        return tuple(map(freeze, sorted(d.items(), key=lambda x: hash(x[0]))))
+        if __PY37:
+            items = d.items()
+        else:
+            items = sorted(d.items(), key=lambda x: hash(x[0]))
+        return tuple(map(freeze, items))
     if isinstance(d, Set):
         return tuple(map(freeze, sorted(d, key=hash)))
-    if isinstance(d, (tuple, list)):
+    if isinstance(d, Sequence):
         return tuple(map(freeze, d))
     return d
