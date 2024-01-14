@@ -63,7 +63,7 @@ class VarDispatcher(Dispatcher):
 
     def __call__(self, *args, **kwargs):
         func, s = self.resolve(args)
-        d = dict((k.token, v) for k, v in s.items())
+        d = {k.token: v for k, v in s.items()}
         return func(**d)
 
 
