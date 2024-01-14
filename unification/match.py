@@ -3,7 +3,7 @@ from .utils import _toposort, freeze
 from .variable import isvar
 
 
-class Dispatcher(object):
+class Dispatcher:
     def __init__(self, name):
         self.name = name
         self.funcs = {}
