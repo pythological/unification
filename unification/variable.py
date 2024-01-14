@@ -1,15 +1,19 @@
 import weakref
 from abc import ABCMeta
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager
 
 _glv = _global_logic_variables = set()
 
 
 class LVarType(ABCMeta):
     def __instancecheck__(self, o):
-        with suppress(TypeError):
-            return issubclass(type(o), (Var, LVarType)) or o in _glv
-        return False
+        if issubclass(type(o), Var):
+            return True
+
+        try:
+            return o in _glv
+        except TypeError:
+            return False
 
 
 class Var(metaclass=LVarType):
