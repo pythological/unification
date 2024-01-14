@@ -100,7 +100,7 @@ def _unify_object(u, v, s):
     >>> unify_object(f, g, {})
     {~x: 2}
     """
-    if type(u) != type(v):
+    if type(u) is not type(v):
         yield False
         return
 
