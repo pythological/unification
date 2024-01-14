@@ -15,13 +15,13 @@ def transitive_get(key, d):
     >>> transitive_get(1, d)
     4
     """
-    for _ in range(len(d)):
-        key = d[key]
-
-        with suppress(TypeError):
-            if key in d:
-                continue
-        break
+    for _ in range(len(d) + 1):
+        try:
+            if key not in d:
+                break
+            key = d[key]
+        except TypeError:
+            break
     else:
         raise RecursionError("dict contains a loop")
 
@@ -99,6 +99,8 @@ def freeze(d):
     >>> freeze({1: 2}) # doctest: +SKIP
     ((1, 2),)
     """
+    if isinstance(d, (str, bytes)):
+        return d
     if isinstance(d, Mapping):
         if __PY37:
             items = d.items()
