@@ -95,11 +95,8 @@ def supercedes(a, b):
     s = unify(a, b)
     if s is False:
         return False
-    s = dict((k, v) for k, v in s.items() if not isvar(k) or not isvar(v))
-    if reify(a, s) == a:
-        return True
-    if reify(b, s) == b:
-        return False
+    s = {k: v for k, v in s.items() if not isvar(k) or not isvar(v)}
+    return reify(a, s) == a
 
 
 def edge(a, b, tie_breaker=hash):
