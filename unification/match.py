@@ -74,18 +74,14 @@ def match(*signature, **kwargs):
     namespace = kwargs.get("namespace", global_namespace)
     dispatcher = kwargs.get("Dispatcher", Dispatcher)
 
-    def _(func):
+    def _match(func):
         name = func.__name__
 
-        if name not in namespace:
-            namespace[name] = dispatcher(name)
-        d = namespace[name]
-
+        d = namespace.setdefault(name, dispatcher(name))
         d.add(signature, func)
-
         return d
 
-    return _
+    return _match
 
 
 def supercedes(a, b):
