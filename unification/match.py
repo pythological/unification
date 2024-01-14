@@ -115,7 +115,7 @@ def ordering(signatures):
     """
     return _toposort(
         {
-            s: [b for a, b in signatuples if edge(s, (a, b))]
+            s: [t for t in signatures if edge(s, t)]
             for s in map(tuple, signatures)
         }
     )
