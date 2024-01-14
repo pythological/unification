@@ -15,9 +15,16 @@ def transitive_get(key, d):
     >>> transitive_get(1, d)
     4
     """
-    with suppress(TypeError):
-        while key in d:
-            key = d[key]
+    for _ in range(len(d)):
+        key = d[key]
+
+        with suppress(TypeError):
+            if key in d:
+                continue
+        break
+    else:
+        raise RecursionError('dict contains a loop')
+
     return key
 
 
