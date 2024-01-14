@@ -1,5 +1,3 @@
-from toolz import first, groupby
-
 from .core import reify, unify
 from .utils import _toposort, freeze
 from .variable import isvar
@@ -122,11 +120,7 @@ def ordering(signatures):
 
     Topological sort of edges as given by ``edge`` and ``supercedes``
     """
-    signatures = list(map(tuple, signatures))
-    edges = [(a, b) for a in signatures for b in signatures if edge(a, b)]
-    edges = groupby(first, edges)
-    for s in signatures:
-        if s not in edges:
-            edges[s] = []
-    edges = dict((k, [b for a, b in v]) for k, v in edges.items())
-    return _toposort(edges)
+    return _toposort({
+        s: [b for a, b in signatuples if edge(s, (a, b))] 
+        for s in map(tuple, signatures)
+    })
