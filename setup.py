@@ -17,7 +17,6 @@ setup(
     keywords="unification logic-programming dispatch",
     packages=["unification"],
     install_requires=[
-        "toolz",
         "multipledispatch",
     ],
     long_description=(open("README.md").read() if exists("README.md") else ""),
