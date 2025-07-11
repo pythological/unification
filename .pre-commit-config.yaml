@@ -1,10 +1,8 @@
 exclude: |
-    (?x)^(
-        versioneer\.py|
-        unification/_version\.py|
-        doc/.*|
-        bin/.*
-    )$
+  (?x)^(
+      doc/.*|
+      bin/.*
+  )$
 repos:
   - repo: https://github.com/psf/black
     rev: 22.3.0
