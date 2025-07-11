@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80.0.0", "versioneer[toml]"]
+requires = ["setuptools>=80.0.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -38,13 +38,9 @@ test = ["pytest"]
 include = ["unification*"]
 exclude = ["tests*"]
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = "unification/_version.py"
-versionfile_build = "unification/_version.py"
-tag_prefix = "v"
-parentdir_prefix = "unification-"
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "dirty-tag"
 
 [tool.pydocstyle]
 add-ignore = [
@@ -67,7 +63,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 relative_files = true
-omit = ["unification/_version.py", "tests/*"]
+omit = ["tests/*"]
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
