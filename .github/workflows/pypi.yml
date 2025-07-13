@@ -11,31 +11,41 @@ on:
 
 jobs:
   build:
-    name: Build source distribution
+    name: Build distributions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
-      - name: Build the sdist
+          python-version: "3.9"
+      - name: Install build dependencies
         run: |
-          python setup.py sdist
+          python -m pip install --upgrade pip
+          python -m pip install build
+      - name: Build sdist and wheel
+        run: |
+          python -m build
       - name: Check the sdist installs and imports
         run: |
           mkdir -p test-sdist
           cd test-sdist
           python -m venv venv-sdist
-          venv-sdist/bin/python -m pip install ../dist/logical-unification-*.tar.gz
-      - uses: actions/upload-artifact@v2
+          venv-sdist/bin/python -m pip install ../dist/logical_unification-*.tar.gz
+      - name: Check the wheel installs and imports
+        run: |
+          mkdir -p test-wheel
+          cd test-wheel
+          python -m venv venv-wheel
+          venv-wheel/bin/python -m pip install ../dist/logical_unification-*.whl
+      - uses: actions/upload-artifact@v4
         with:
           name: artifact
           path: dist/*
 
   upload_pypi:
-    name: Upload to PyPI on release
+    name: Upload distributions to PyPI on release
     needs: [build]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
@@ -44,7 +54,7 @@ jobs:
         with:
           name: artifact
           path: dist
-      - uses: pypa/gh-action-pypi-publish@master
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.pypi_secret }}
