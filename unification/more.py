@@ -100,11 +100,9 @@ def _unify_object(u, v, s):
     >>> unify_object(f, g, {})
     {~x: 2}
     """
-    if type(u) != type(v):
+    if type(u) is not type(v):
         yield False
-        return
-
-    if hasattr(u, "__slots__"):
+    elif hasattr(u, "__slots__"):
         yield _unify(
             tuple(getattr(u, slot) for slot in u.__slots__),
             tuple(getattr(v, slot) for slot in v.__slots__),
