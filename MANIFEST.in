@@ -49,4 +49,3 @@ global-exclude tox.ini
 global-exclude .pylintrc
 global-exclude Makefile
 global-exclude requirements.txt
-global-exclude MIGRATION_CHECKLIST.md
