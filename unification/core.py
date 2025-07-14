@@ -281,7 +281,6 @@ def isground(u, s):
     """Determine whether or not `u` contains an unground logic variable under mappings `s`."""  # noqa: E501
 
     def lvar_filter(z, r):
-
         if isvar(r):
             raise UngroundLVarException()
         elif r is construction_sentinel:

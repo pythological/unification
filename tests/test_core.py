@@ -163,7 +163,6 @@ def test_unground_lvars():
     a_lv, b_lv = var(), var()
 
     for ctor in (tuple, list, iter, set, frozenset):
-
         if ctor not in (set, frozenset):
             sub_ctor = list
         else:
@@ -257,7 +256,6 @@ def test_unify_recursion_limit():
 
 
 def test_unify_freeze():
-
     # These will sometimes be in different orders after conversion to
     # `iter`/`list`/`tuple`!
     # u = frozenset({("name", a), ("debit", b)})

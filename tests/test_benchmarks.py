@@ -11,7 +11,6 @@ nesting_sizes = [10, 35, 300]
 
 
 def unify_stack(u, v, s):
-
     u = walk(u, s)
     v = walk(v, s)
 
@@ -34,7 +33,6 @@ def unify_stack(u, v, s):
 
 
 def reify_stack(u, s):
-
     u_ = walk(u, s)
 
     if u_ is not u:
