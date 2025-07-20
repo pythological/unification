@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Set
 from contextlib import suppress
+from typing import Any, Union
 
 
 def transitive_get(key, d):
@@ -93,3 +94,23 @@ def freeze(d):
     if isinstance(d, (tuple, list)):
         return tuple(map(freeze, d))
     return d
+
+
+def find_deepest_element_in_nested_structure(structure: Union[list[Any], Any]) -> Any:
+    """Navigate to the deepest element in the nested structure.
+
+    This is a helper function used in the package tests.
+
+    Args:
+        structure (Union[list[Any], Any]): Nested structure for which the
+            deepest element will be returned.
+
+    Returns:
+        Any: deepest element of the nested structure.
+    """
+    current = structure
+    while isinstance(current, list) and len(current) == 2:
+        if not isinstance(current[1], list):
+            return current[1]
+        current = current[1]
+    return current
