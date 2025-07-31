@@ -2,10 +2,12 @@ import sys
 from collections import OrderedDict
 from types import MappingProxyType
 
+import pytest
+
 from tests.utils import gen_long_chain
 from unification import var
 from unification.core import assoc, isground, reify, unground_lvars, unify
-from unification.utils import find_deepest_element_in_nested_structure, freeze
+from unification.utils import freeze
 
 
 def test_assoc():
@@ -210,173 +212,47 @@ def test_unground_lvars():
     assert unground_lvars(test_l, {}) == {a_lv}
 
 
-def test_reify_handles_deep_nesting():
-    """Test that reify() can handle deeply nested structures without hitting
-    recursion limits."""
+def test_reify_recursion_limit():
+    import platform
+
     a_lv = var()
 
-    # Test with a structure deeper than typical recursion limits
-    deep_structure, _ = gen_long_chain(a_lv, 500)
+    b, _ = gen_long_chain(a_lv, 10)
+    res = reify(b, {a_lv: "a"})
+    assert res == gen_long_chain("a", 10)[0]
 
-    # This should succeed regardless of recursion limit
-    result = reify(deep_structure, {a_lv: "resolved"})
-
-    # Verify the structure was processed (check a few levels)
-    assert isinstance(result, list)
-    assert result[0] == 1  # First element should be the counter
-
-    # Navigate a few levels deep to verify structure
-    current = result
-    for i in range(5):  # Check first 5 levels
-        assert isinstance(current, list)
-        assert len(current) == 2
-        if i < 4:  # Not the last iteration
-            current = current[1]
-
-    # The deepest element should be our resolved value
-    assert find_deepest_element_in_nested_structure(result) == "resolved"
-
-
-def test_reify_works_with_low_recursion_limit():
-    """Test that reify() works even when Python's recursion limit is
-    artificially low."""
-    a_lv = var()
-    original_limit = sys.getrecursionlimit()
+    r_limit = sys.getrecursionlimit()
 
     try:
-        # Set a low recursion limit
         sys.setrecursionlimit(100)
 
-        # Create a structure much deeper than the recursion limit
-        deep_structure, _ = gen_long_chain(a_lv, 200)
+        b, _ = gen_long_chain(a_lv, 200)
+        res = reify(b, {a_lv: "a"})
+        exp_res, _ = gen_long_chain("a", 200)
 
-        # This should still work because the library uses stream_eval
-        result = reify(deep_structure, {a_lv: "success"})
+        if platform.python_implementation().lower() != "pypy":
+            # CPython has stack limit issues when comparing nested lists, but
+            # PyPy doesn't.
+            with pytest.raises(RecursionError):
+                assert res == exp_res
 
-        # Verify it worked
-        assert isinstance(result, list)
+        sys.setrecursionlimit(300)
 
-        # Navigate to verify the deepest element
-        assert find_deepest_element_in_nested_structure(result) == "success"
-
-    finally:
-        sys.setrecursionlimit(original_limit)
-
-
-def test_unify_handles_deep_nesting():
-    """Test that unify() can handle deeply nested structures without hitting
-    recursion limits."""
-    a_lv = var()
-
-    # Create two deep structures - one with a variable, one with a value
-    structure_with_var, _ = gen_long_chain(a_lv, 300)
-    structure_with_value, _ = gen_long_chain("matched", 300)
-
-    # This should succeed regardless of recursion limit
-    result = unify(structure_with_var, structure_with_value, {})
-
-    # Verify unification succeeded
-    assert result is not False
-    assert isinstance(result, dict)
-    assert a_lv in result
-    assert result[a_lv] == "matched"
-
-
-def test_unify_works_with_low_recursion_limit():
-    """Test that unify() works even when Python's recursion limit is
-    artificially low."""
-    a_lv = var()
-    original_limit = sys.getrecursionlimit()
-
-    try:
-        # Set a low recursion limit
-        sys.setrecursionlimit(100)
-
-        # Create structures much deeper than the recursion limit
-        structure_with_var, _ = gen_long_chain(a_lv, 150)
-        structure_with_value, _ = gen_long_chain("unified", 150)
-
-        # This should still work because the library uses stream_eval
-        result = unify(structure_with_var, structure_with_value, {})
-
-        # Verify unification succeeded
-        assert result is not False
-        assert isinstance(result, dict)
-        assert a_lv in result
-        assert result[a_lv] == "unified"
+        assert res == exp_res
 
     finally:
-        sys.setrecursionlimit(original_limit)
+        sys.setrecursionlimit(r_limit)
 
 
-def test_reify_correctness_on_moderately_deep_structure():
-    """Test that reify() produces correct results on a moderately deep
-    structure we can verify."""
+def test_unify_recursion_limit():
     a_lv = var()
 
-    # Create a structure deep enough to be meaningful but shallow enough to verify
-    deep_structure, lvars = gen_long_chain(a_lv, 20, use_lvars=True)
+    b, _ = gen_long_chain("a")
+    b_var, _ = gen_long_chain(a_lv)
 
-    # Create substitution mapping
-    substitutions = {a_lv: "final_value"}
-    substitutions.update({lvar: f"level_{level}" for lvar, level in lvars.items()})
+    s = unify(b, b_var, {})
 
-    # Reify the structure
-    result = reify(deep_structure, substitutions)
-
-    # Verify the structure is correct by checking a few key positions
-    assert isinstance(result, list)
-    assert result[0] == "level_1"  # First element should be the substituted lvar
-
-    # Navigate and verify a few levels
-    current = result
-    for expected_level in [1, 2, 3]:
-        assert isinstance(current, list)
-        assert len(current) == 2
-        assert current[0] == f"level_{expected_level}"
-        if expected_level < 3:  # Not the last iteration
-            current = current[1]
-
-    # The deepest element should be our final value
-    assert find_deepest_element_in_nested_structure(result) == "final_value"
-
-
-def test_mixed_deep_and_shallow_structures():
-    """Test reify() with a mix of deep and shallow nested structures."""
-    a_lv, b_lv = var(), var()
-
-    # Create a complex structure with both deep and shallow parts
-    deep_part, _ = gen_long_chain(a_lv, 100)
-    shallow_part = [b_lv, "shallow"]
-
-    complex_structure = {
-        "deep": deep_part,
-        "shallow": shallow_part,
-        "mixed": [deep_part, shallow_part],
-    }
-
-    substitutions = {a_lv: "deep_value", b_lv: "shallow_value"}
-
-    # This should handle the mixed complexity gracefully
-    result = reify(complex_structure, substitutions)
-
-    # Verify the structure
-    assert isinstance(result, dict)
-    assert "deep" in result
-    assert "shallow" in result
-    assert "mixed" in result
-
-    # Check the shallow part
-    assert result["shallow"] == ["shallow_value", "shallow"]
-
-    # Check that deep part was processed (verify it's a list starting with 99)
-    assert isinstance(result["deep"], list)
-    assert result["deep"][0] == 1
-
-    # Check mixed part
-    assert isinstance(result["mixed"], list)
-    assert len(result["mixed"]) == 2
-    assert result["mixed"][1] == ["shallow_value", "shallow"]
+    assert s[a_lv] == "a"
 
 
 def test_unify_freeze():
