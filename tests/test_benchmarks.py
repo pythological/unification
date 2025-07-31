@@ -100,10 +100,9 @@ def test_unify_chain_stream_large(size, benchmark):
     res = benchmark(unify, form, term, {})
     assert res[a_lv] == "a"
 
-
 @pytest.mark.skipif(
-    platform.python_implementation() == "PyPy",
-    reason="PyPy's sys.getrecursionlimit changes",
+    platform.python_implementation() == "PyPy" or (platform.python_implementation() == "CPython" and sys.version_info >= (3, 12)),
+    reason="Test skipped on PyPy and CPython 3.12+ due to recursion limit changes.",
 )
 @pytest.mark.benchmark(group="reify_chain")
 @pytest.mark.parametrize("size", [sys.getrecursionlimit(), sys.getrecursionlimit() * 5])
