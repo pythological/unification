@@ -1,3 +1,4 @@
+import platform
 import sys
 from collections import OrderedDict
 from types import MappingProxyType
@@ -212,9 +213,11 @@ def test_unground_lvars():
     assert unground_lvars(test_l, {}) == {a_lv}
 
 
+@pytest.mark.skipif(
+    platform.python_implementation() == "CPython" and sys.version_info >= (3, 12),
+    reason="Skipped on CPython 3.12+ due to recursion limit changes.",
+)
 def test_reify_recursion_limit():
-    import platform
-
     a_lv = var()
 
     b, _ = gen_long_chain(a_lv, 10)
