@@ -33,9 +33,9 @@ def test_unify_object():
 def test_unify_nonstandard_object():
     _unify.add((ast.AST, ast.AST, Mapping), _unify_object)
     x = var()
-    assert unify(ast.Num(n=1), ast.Num(n=1), {}) == {}
-    assert unify(ast.Num(n=1), ast.Num(n=2), {}) is False
-    assert unify(ast.Num(n=1), ast.Num(n=x), {}) == {x: 1}
+    assert unify(ast.Constant(n=1), ast.Constant(n=1), {}) == {}
+    assert unify(ast.Constant(n=1), ast.Constant(n=2), {}) is False
+    assert unify(ast.Constant(n=1), ast.Constant(n=x), {}) == {x: 1}
 
 
 def test_reify_object():
@@ -51,9 +51,9 @@ def test_reify_object():
 def test_reify_nonstandard_object():
     _reify.add((ast.AST, Mapping), _reify_object)
     x = var()
-    assert reify(ast.Num(n=1), {}).n == 1
-    assert reify(ast.Num(n=x), {}).n == x
-    assert reify(ast.Num(n=x), {x: 2}).n == 2
+    assert reify(ast.Constant(n=1), {}).n == 1
+    assert reify(ast.Constant(n=x), {}).n == x
+    assert reify(ast.Constant(n=x), {x: 2}).n == 2
 
 
 def test_reify_slots():
